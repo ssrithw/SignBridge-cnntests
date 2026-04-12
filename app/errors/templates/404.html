@@ -1,0 +1,23 @@
+<!-- 
+Error page for 404 Page Not Found
+Created by Shivangi Sritharan
+Last modified: 10/04/2026
+
+same as index page. pls update 
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<body>
+    <p>Page not found! Try something else</p>
+    <p><a href="{{ url_for('main.index') }}">Go back to the home page</a></p>
+</body>
+
+</html>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

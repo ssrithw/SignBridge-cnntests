@@ -1,0 +1,96 @@
+<!-- 
+Contact us page 
+Created by Anuki Kithara
+Last modified 10/04/2026
+ 
+ add a description 
+ -->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+  <div class="container">
+    <!-- Page Header -->
+    <div style="text-align: left; margin-bottom: 32px;">
+      <h1 class="page-title" style="text-align: left; margin-bottom: 8px;">Get in Touch</h1>
+      <p class="page-subtitle" style="text-align: left; margin-bottom: 0;">Have questions or need assistance? We're here
+        to help.</p>
+    </div>
+
+    <!-- Two Column Layout-->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+
+      <!-- Left Column -->
+      <div class="flex flex-col" style="gap: 20px;">
+        <!-- Card 1 Email -->
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="https://i.postimg.cc/Bnhkb5Ln/mail.png" alt="Email" style="width: 65px; height: 65px;">
+            <div>
+              <p style="font-weight:700; font-size:1.1rem; margin-bottom: 4px;">Email Us</p>
+              <p style="color:var(--text-secondary);">support@signbridge.com</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 Call -->
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="https://i.postimg.cc/9QXscgfg/telephone.png" alt="Call" style="width: 65px; height: 65px;">
+            <div>
+              <p style="font-weight:700; font-size:1.1rem; margin-bottom: 4px;">Call Us</p>
+              <!-- now links to dulitha's phone because it's funny -->
+              <p style="color:var(--text-secondary);">+94 71 436 0180</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Working Hours -->
+        <div style="margin-top: 8px;">
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">Working Hours</h2>
+          <p style="color: var(--text-secondary);">Mon-Fri: 9:00 AM - 5:00 PM</p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="card">
+        <h3 style="font-size:1.25rem; font-weight:700; margin-bottom: 24px;">Contact Form</h3>
+
+        <!-- Name -->
+        <div class="form-group">
+          <label class="form-label" for="contactName">Your Name</label>
+          <input class="input" type="text" id="contactName" placeholder="Enter your name">
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="contactEmail">Your Email</label>
+          <input class="input" type="email" id="contactEmail" placeholder="Enter your email">
+        </div>
+
+        <!-- Subject -->
+        <div class="form-group">
+          <label class="form-label" for="contactSubject">Subject</label>
+          <input class="input" type="text" id="contactSubject" placeholder="Enter subject">
+        </div>
+
+        <!-- Message -->
+        <div class="form-group">
+          <label class="form-label" for="contactMessage">Message</label>
+          <textarea class="input" id="contactMessage" placeholder="Write your message here…" rows="4"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <button class="btn btn-primary btn-block" onclick="sendContactForm()">Send Message</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

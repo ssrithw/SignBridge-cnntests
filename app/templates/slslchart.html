@@ -1,0 +1,75 @@
+<!-- 
+SLSL chart
+Created by Anuki Kithara
+Last modified: 10/04/2026
+ 
+add description
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+  <div class="container">
+    <!-- Page Header (left-aligned to match other pages) -->
+    <div style="text-align: left; margin-bottom: 32px;">
+      <h1 class="page-title" style="text-align: left; margin-bottom: 8px;">Sri Lankan Sign Language Chart (English
+        Version)</h1>
+      <p class="page-subtitle" style="text-align: left; margin-bottom: 0;">English fingerspelling alphabet reference
+        guide</p>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="card" style="padding: 20px;">
+      <!-- Chart Image - Full size, responsive -->
+      <div style="text-align: center;">
+        <img src="https://i.postimg.cc/g2d1bknb/SLSL-Eng-Ver.jpg"
+          alt="Sri Lankan Sign Language Alphabet Chart - English Version"
+          style="width: 100%; height: auto; border-radius: var(--radius);">
+
+        <p
+          style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 12px; line-height: 1.4; margin-bottom: 4px;">
+          <em>Sri Lankan Sign Language fingerspelling alphabet (English version)</em>.
+        </p>
+        <p style="color: var(--text-secondary); font-size: 0.75rem; line-height: 1.4; margin-top: 0;">
+          <strong>Source:</strong> Department of Social Services, Sri Lanka. (2025, September 23).
+          In <em>Introduction to the Sign Language of Sri Lanka</em> (p. 21).
+        </p>
+      </div>
+
+      <!-- Info Section -->
+      <div style="margin-top: 32px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 12px;">About the Chart</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+          This chart displays the Sri Lankan Sign Language fingerspelling alphabet. Each letter corresponds to a
+          specific hand gesture used to spell out words letter by letter.
+        </p>
+
+        <!-- Tips -->
+        <div style="background: var(--bg); border-radius: var(--radius); padding: 20px; margin-top: 16px;">
+          <h4 style="font-weight: 700; margin-bottom: 12px;">Things to know about Sign Language:</h4>
+          <ul style="list-style-position: inside; color: var(--text-secondary); line-height: 1.8;">
+            <li>Pay attention to the shape of your hand, the movement of your hand and the position of your hand.</li>
+            <li>Use your dominant hand for single handed letters.</li>
+            <li>Keep your body relaxed while signing to ensure smooth and fluid movements.</li>
+            <li>Use a mirror to check your hand shapes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Back Button -->
+      <div style="margin-top: 32px; text-align: center;">
+        <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
+          ← Back to Help
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

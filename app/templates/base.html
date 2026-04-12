@@ -1,0 +1,121 @@
+<!--
+base.html
+Created by Shivangi Sritharan
+Last modified: 10/04/2026
+
+This file contains the template code for every web page in this
+application. It consists of the navbar, footer and default styling.
+
+Flask uses the Jinja template library to render templates.
+
+Note that it is possible, and in fact more modular, to have these
+elements in their own files. I've decided not to because it's easier 
+to serve this as a single template. I may change my mind
+during the testing phase, though.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - SignBridge</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <!-- include bootstrap css (commented out because it was interfering with styles.css)-->
+    <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">-->
+</head>
+
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">
+            <img src="https://i.postimg.cc/G37BHLsC/Sand-Solutions-Logo.png" alt="Sand Solutions Logo"
+                class="brand-logo">
+            SignBridge
+        </a>
+        <button class="navbar-hamburger" onclick="toggleMenu()">☰</button>
+        <ul class="navbar-links" id="navLinks">
+            <li><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li><a href="{{ url_for('main.about') }}">About</a></li>
+            <li><a href="{{ url_for('main.help') }}">Help</a></li>
+            <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
+            {% if current_user.is_anonymous %} <!-- anon status is set by UserMixin provided by Flask-Login-->
+            <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+            {% else %}
+            <li><a href="{{ url_for('main.user', username=current_user.username) }}">Profile</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <hr>
+    <!-- toast container - popup with information -->
+    <div class="toast-container position-fixed p-3" style="z-index: 1080; top: 70px; left: 1rem;">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        
+        <!-- map flask categories to bootstrap categories -->
+        {% set bootstrap_category = {
+        'message': 'primary',
+        'error': 'danger',
+        'warning': 'warning',
+        'info': 'info',
+        'success': 'success'
+        }.get(category, 'primary') %}
+
+        <div class="toast align-items-center text-bg-{{ bootstrap_category }} border-0 mb-2" role="alert"
+            aria-live="assertive" aria-atomic="true">
+
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ message }}
+                </div>
+
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
+            </div>
+        </div>
+
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- content on all other pages goes here -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="footer">
+        <ul class="footer-links">
+            <li><a href="#">Privacy Policy</a></li>
+            <li><span class="separator">|</span></li>
+            <li><a href="#">Terms of Service</a></li>
+        </ul>
+        <p class="footer-copy">
+            <img src="https://i.postimg.cc/G37BHLsC/Sand-Solutions-Logo.png" alt="Sand Solutions Logo"
+                class="footer-logo">&copy; 2025 SignBridge. All rights reserved.
+        </p>
+    </footer>
+
+    <!-- include bootstrap js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+    <!-- auto-hide toasts after a while -->
+    <script>
+        const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+        toastElList.forEach(function (toastEl) {
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+        });
+    </script>
+</body>
+
+</html>

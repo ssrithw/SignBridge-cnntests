@@ -1,0 +1,35 @@
+<!-- 
+About us page
+Created by Anuki Kithara
+Last modified: 11/04/2026
+
+same as index page. pls update 
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+  <main class="main">
+    <div class="container">
+      <div class="card card-sm text-center" style="max-width: 450px;">
+        <!-- Warning icon -->
+        <div style="font-size: 5rem; margin-bottom: 20px;">⚠️</div>
+        
+        <!-- Error message -->
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 12px;">Something Went Wrong</h1>
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 32px;">
+          An unexpected error occurred. Please try again.
+        </p>
+        
+        <!-- Go back button -->
+        <button class="btn btn-primary" onclick="goBack()">← Go Back</button>
+      </div>
+    </div>
+  </main>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

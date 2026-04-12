@@ -1,0 +1,72 @@
+<!-- 
+Waiting room
+Created by Anuki Kithara
+Last modified: 10/04/2026
+
+same as index page. pls update -->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+  <!-- Page Header -->
+  <h1 class="page-title">Waiting Room</h1>
+  <!-- Room Code-->
+  <p class="page-subtitle">Room Code: <strong id="waitRoomCode">{{ room_code }}</strong></p>
+
+  <div class="card card-md text-center">
+    <!-- Camera Preview -->
+    <div class="video-placeholder" style="width:100%;aspect-ratio:16/9;margin-bottom:24px;">
+      <span style="position:relative;z-index:1;">Camera Preview</span>
+    </div>
+
+    <!-- Status Indicator-->
+    <span class="status-badge status-badge--waiting">
+      <span class="status-dot status-dot--pulse" style="background:#d4a017;"></span>
+      Waiting for another participant to join…
+    </span>
+
+    <!-- Action buttons -->
+    <div class="flex justify-center gap-12 mt-24">
+      <button class="btn btn-success" onclick="joinCall()">Join Call</button>
+      <button class="btn btn-secondary" onclick="goBack()">Back</button>
+    </div>
+  </div>
+</main>
+
+<!-- ======================================= Javascript (required to handle connections) ================================== -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    const ROOM = "{{ room_code }}";
+    const socket = io();
+
+    socket.on('connect', () => {
+        // Only emit once the connection is confirmed open
+        socket.emit('join_room', { room: ROOM });
+    });
+
+    socket.on('peer_ready', () => {
+        window.location.href = `/call?room=${ROOM}`;
+    });
+
+    socket.on('error', (data) => {
+        alert(data.message);
+    });
+
+    function joinCall() {
+        socket.emit('join_room', { room: ROOM });
+    }
+
+    function goBack() {
+        socket.disconnect();
+        window.history.back();
+    }
+</script>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

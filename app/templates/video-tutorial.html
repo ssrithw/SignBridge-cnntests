@@ -1,0 +1,86 @@
+<!-- 
+Video Tutorial Page
+Created by Anuki Kithara
+Last modified 10/04/2026
+
+description
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+  <div class="container">
+    <!-- Page header -->
+    <div style="text-align: left; margin-bottom: 32px;">
+      <h1 class="page-title" style="text-align: left; margin-bottom: 8px;">Video Tutorial</h1>
+      <p class="page-subtitle" style="text-align: left; margin-bottom: 0;">Step-by-step guide to using SignBridge</p>
+    </div>
+
+    <!-- Video container -->
+    <div class="card" style="padding: 20px;">
+      <div
+        style="position: relative; width: 100%; aspect-ratio: 16 / 9; background: #1a1a2e; border-radius: var(--radius); overflow: hidden;">
+        <!-- Video element - add source when ready -->
+        <video id="demoVideo" controls style="width: 100%; height: 100%; object-fit: cover;"
+          poster="https://via.placeholder.com/1280x720/3A5673/FFFFFF?text=SignBridge+Tutorial+Video">
+          <!-- <source src="#" type="video/mp4"> -->
+          Your browser does not support the video tag.
+        </video>
+
+        <!-- Placeholder text for fallback -->
+        <div id="videoPlaceholder"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; background: #1a1a2e; flex-direction: column; gap: 16px;">
+          <span style="font-size: 3rem;">🎬</span>
+          <p style="font-size: 1rem;">Demo video here</p>
+        </div>
+      </div>
+
+      <!-- Video desc -->
+      <div style="margin-top: 24px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 12px;">How to Use SignBridge</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+          This video tutorial walks you through the complete process of using SignBridge for real-time sign language
+          communication.
+        </p>
+
+        <!-- Content -->
+        <div style="background: var(--bg); border-radius: var(--radius); padding: 20px; margin-top: 16px;">
+          <h4 style="font-weight: 700; margin-bottom: 12px;">Contents:</h4>
+          <ul style="list-style-position: inside; color: var(--text-secondary); line-height: 1.8;">
+            <li>Creating a new session or joining an existing room</li>
+            <li>Setting up your camera and microphone</li>
+            <li>Using the sign language recognition feature</li>
+            <li>Understanding the transcript and detected letters</li>
+            <li>Tips for best recognition results</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Back Button -->
+      <div style="margin-top: 32px; text-align: center;">
+        <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
+          ← Back to Help
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  // Hides placeholder when video loads
+  const video = document.getElementById('demoVideo');
+  const placeholder = document.getElementById('videoPlaceholder');
+
+  if (video && placeholder) {
+    video.addEventListener('loadeddata', function () {
+      placeholder.style.display = 'none';
+    });
+  }
+</script>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

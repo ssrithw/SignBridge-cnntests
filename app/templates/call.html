@@ -1,0 +1,413 @@
+<!-- 
+Calling room
+Created by Anuki Kithara
+Last modified: 10/04/2026
+
+same as index page. pls update 
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- this page is divided into two parts: waiting and call -->
+
+<!-- waiting room - this is shown until a second participant joins the call
+     this section reuses code from the now deprecated waiting.html -->
+<main class="main">
+  <div id="waiting-room">
+    <h1 class="page-title">Waiting Room</h1>
+    <p class="page-subtitle">
+      Room Code: <strong id="waitRoomCode">{{ room_code }}</strong>
+    </p>
+
+    <div class="card card-md text-center">
+      <!-- Live camera preview (permissions requested here) -->
+      <div style="width:100%;aspect-ratio:16/9;margin-bottom:24px;
+                  background:#111;border-radius:8px;overflow:hidden;position:relative;">
+        <video id="waitPreview" autoplay muted playsinline
+          style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+        <p id="waitPreviewStatus" style="position:absolute;inset:0;display:flex;align-items:center;
+                  justify-content:center;color:#aaa;font-size:0.9rem;
+                  margin:0;pointer-events:none;"></p>
+      </div>
+
+      <!-- Status Indicator -->
+      <span class="status-badge status-badge--waiting" id="waitStatus">
+        <span class="status-dot status-dot--pulse" style="background:#d4a017;"></span>
+        Waiting for another participant to join…
+      </span>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-center gap-12 mt-24">
+        <!-- removed the join call button as it was redundant - you're already doing that lol -->
+        <button class="btn btn-danger" onclick="cancelAndLeave()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- call room - the application refreshes with this once a second user has joined the call -->
+
+  <div id="calling-room" style="display:none;">
+    <div class="container">
+
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-24" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:700;">Video Call Session</h1>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">
+            Room: <strong id="callRoomCode"></strong> <!-- removed static code; app now looks for the correct code -->
+          </p>
+        </div>
+        <span class="status-badge status-badge--connected" id="callStatus"> <!-- might need to modify this -->
+          <span class="status-dot" style="background:#27ae60;"></span>
+          Connecting…
+        </span>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="call-layout">
+
+        <!-- Left Column - removed placeholder code -->
+        <div>
+          <div class="video-container">
+            <!-- other user's video -->
+            <video id="remoteVideo" autoplay playsinline class="video-placeholder video-main"
+              style="background:#111;object-fit:cover;"></video>
+            <!-- your video -->
+            <video id="localVideo" autoplay muted playsinline class="video-placeholder video-self"
+              style="background:#222;object-fit:cover;"></video>
+          </div>
+
+          <div id="timerDisplay"
+            style="font-size:2rem;font-weight:700;text-align:center; display:none;color:var(--text-secondary);margin-bottom:8px;">
+            5</div>
+
+          <!-- Call Control Buttons -->
+          <div class="call-controls">
+            <button class="btn btn-success" id="btnStartRecog" onclick="startRecognition()">▶ Start Recognition</button>
+            <button class="btn btn-primary" id="btnStopRecog" onclick="stopRecognition()" disabled>⏹ Stop
+              Recognition</button>
+            <button class="btn btn-secondary" onclick="clearTranscript()">Clear Transcript</button>
+            <button class="btn btn-danger" onclick="leaveCall()">✕ Leave Call</button>
+          </div>
+        </div>
+
+        <!-- Right column: detected letter + transcript -->
+        <div class="flex flex-col gap-12" style="gap:16px;">
+          <!-- Current detected letter -->
+          <div class="card" style="padding:20px;">
+            <p style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);
+                      margin-bottom:8px;">Current Detected Letter</p>
+            <div class="detected-letter" id="detectedLetter">—</div>
+            <p class="text-center mt-16" style="font-size:0.8rem;color:var(--text-secondary);" id="recognitionStatus">No
+              hand detected</p>
+          </div>
+
+          <!-- Transcript -->
+          <div class="card" style="padding:20px;">
+            <p style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);
+                      margin-bottom:8px;">Transcript</p>
+            <div class="transcript-box" id="transcriptBox">
+              <span style="color:#aaa;font-style:italic;">
+                Recognized letters will appear here…
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- call-layout -->
+    </div><!-- container -->
+  </div><!-- calling-room -->
+
+  <canvas id="captureCanvas" style="display:none;"></canvas>
+
+</main>
+
+<!-- ======================================= Javascript ======================================= -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script> <!-- load socketio -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script> <!-- load tensorflow.js -->
+
+<script>
+  /* constants */
+  // webrtc
+  const ROOM = "{{ room_code }}";
+  const ICE_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+  // init model
+  const MODEL_URL = 'https://huggingface.co/ssrith/slsl-toy/resolve/main/model.json';
+  const CLASSES_URL = 'https://huggingface.co/ssrith/slsl-toy/resolve/main/class_names.json';
+
+  // model recognition
+  const CAPTURE_AT_SECOND = 4;   // capture frame when countdown reaches this value
+  const TOTAL_SECONDS = 5;
+  const DEBOUNCE_FRAMES = 3;     // letter must appear 3 times in a row before appending
+  const INPUT_SIZE = 128;
+  const CONFIDENCE_THRESHOLD = 0.55;
+
+  /* state mgmt */
+  let localStream = null;   // acquired in waiting phase and reused in call phase
+  let pc = null;   // peer connection is created when peer joins
+  let model = null;
+  let classNames = [];
+  let countdownTimer = null;
+  let secondsRemaining = TOTAL_SECONDS;
+
+  /* call socketio */
+  const socket = io();
+
+  /* start loading items */
+  // room code
+  document.getElementById('waitRoomCode').textContent = ROOM;
+  document.getElementById('callRoomCode').textContent = ROOM;
+  // asynchronously load model and ask for camera perms
+  (async function init() {
+    // camera
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      document.getElementById('waitPreview').srcObject = localStream;
+    } catch (err) {
+      document.getElementById('waitPreviewStatus').textContent =
+        'Camera / mic access denied — please allow and reload.'; /* change to switch */
+      return;
+    }
+
+    /* model — load silently in background so it's ready by call time */
+    loadModel();  // intentionally not awaited; errors are shown in recognitionStatus
+
+    socket.emit('join_room', { room: ROOM });
+  })();
+
+  /* ================================ tensorflow.js - load model, run on client side ================================ */
+  async function loadModel() {
+    if (typeof tf === 'undefined') {
+      setRecogStatus('⚠ TensorFlow.js failed to load — check network/CSP');
+      return;
+    }
+    setRecogStatus('Loading model…');
+    try {
+      const res = await fetch(CLASSES_URL);
+      const raw = await res.json();
+      classNames = Array.isArray(raw) ? raw : Object.values(raw);
+
+      // ← KEY CHANGE: loadGraphModel, not loadLayersModel
+      model = await tf.loadGraphModel(MODEL_URL);
+
+      setRecogStatus('Model ready — press ▶ to start');
+      document.getElementById('btnStartRecog').disabled = false;
+    } catch (err) {
+      console.error('Model load error:', err);
+      setRecogStatus('⚠ Model failed to load: ' + err.message);
+    }
+  }
+
+  /* recognition loop */
+  function startRecognition() {
+    if (!model) { setRecogStatus('Model not ready yet — please wait'); return; }
+
+    const video = document.getElementById('localVideo');
+    if (!video || video.readyState < 2) { setRecogStatus('Video not ready'); return; }
+
+    // Reset UI
+    document.getElementById('btnStartRecog').disabled = true;
+    document.getElementById('detectedLetter').textContent = '—';
+    document.getElementById('timerDisplay').style.display = 'block';
+    secondsRemaining = TOTAL_SECONDS;
+    document.getElementById('timerDisplay').textContent = secondsRemaining;
+    setRecogStatus('Hold your sign steady…');
+
+    countdownTimer = setInterval(() => {
+      if (secondsRemaining === CAPTURE_AT_SECOND) {
+        captureAndInfer();   // fire-and-forget; countdown doesn't wait for inference
+      }
+      secondsRemaining--;
+      document.getElementById('timerDisplay').textContent = secondsRemaining;
+
+      if (secondsRemaining < 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        document.getElementById('timerDisplay').style.display = 'none';
+        document.getElementById('btnStartRecog').disabled = false;
+        setRecogStatus('Done — press ▶ to recognise again');
+      }
+    }, 1000);
+  }
+
+  async function captureAndInfer() {
+    const video = document.getElementById('localVideo');
+    const canvas = document.getElementById('captureCanvas');
+    canvas.width = INPUT_SIZE;
+    canvas.height = INPUT_SIZE;
+    const ctx = canvas.getContext('2d');
+
+    // Mirror the frame to match training orientation
+    ctx.save();
+    ctx.translate(INPUT_SIZE, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, INPUT_SIZE, INPUT_SIZE);
+    ctx.restore();
+
+    const tensor = tf.tidy(() =>
+      tf.browser.fromPixels(canvas).toFloat().expandDims(0)
+    );
+
+    let predictions;
+    let predTensor;
+    try {
+      const predTensor = model.execute(tensor);
+      console.log('execute output:', predTensor);
+      console.log('model inputs:', model.inputs);
+      console.log('model outputs:', model.outputs);
+      predictions = await predTensor.data();
+      predTensor.dispose();
+    } catch (err) {
+      setRecogStatus('⚠ Inference error: ' + err.message);
+      return;
+    } finally {
+      tensor.dispose();
+    }
+
+    let maxIdx = 0;
+    for (let i = 1; i < predictions.length; i++) {
+      if (predictions[i] > predictions[maxIdx]) maxIdx = i;
+    }
+
+    const confidence = predictions[maxIdx];
+    const letter = classNames[maxIdx] ?? String(maxIdx);
+
+    if (confidence < CONFIDENCE_THRESHOLD) {
+      document.getElementById('detectedLetter').textContent = '—';
+      setRecogStatus('No confident prediction — try again');
+      return;
+    }
+
+    document.getElementById('detectedLetter').textContent = letter;
+    appendToTranscript(letter);
+    setRecogStatus(`Detected: ${letter} (${(confidence * 100).toFixed(1)}%)`);
+  }
+
+  function appendToTranscript(letter) {
+    const box = document.getElementById('transcriptBox');
+    /* remove placeholder text on first real letter */
+    if (box.querySelector('span[style]')) box.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = letter;
+    span.style.cssText = 'font-size:1.4rem;font-weight:700;margin:2px;display:inline-block;';
+    box.appendChild(span);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clearTranscript() {
+    document.getElementById('transcriptBox').innerHTML =
+      '<span style="color:#aaa;font-style:italic;">Recognized letters will appear here…</span>';
+    document.getElementById('detectedLetter').textContent = '—';
+  }
+
+  function setRecogStatus(msg) {
+    document.getElementById('recognitionStatus').textContent = msg;
+  }
+
+  /* ================================ webrtc/socketio - server returns the roles of each user ================================ */
+  socket.on('role', ({ role }) => {
+    // store it; peer_ready fires immediately after on both sides
+    socket._role = role;
+  });
+
+  /* ── peer_ready; both peers are in the room ── */
+  socket.on('peer_ready', async () => {
+    enterCallPhase();
+    await createPeerConnection();
+
+    if (socket._role === 'caller') {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      send('offer', pc.localDescription);   // single signal envelope
+    }
+  });
+
+  /* ── one handler dispatches signal by type ── */
+  socket.on('signal', async ({ type, sdp, candidate }) => {
+    if (!pc) return;
+
+    if (type === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription({ type, sdp }));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      send('answer', pc.localDescription);
+
+    } else if (type === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription({ type, sdp }));
+
+    } else if (type === 'ice-candidate' && candidate) {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    }
+  });
+
+  /* ── if user leaves, refresh status ── */
+  socket.on('peer_left', () => {
+    setCallStatus('Peer left the call', false);
+    document.getElementById('remoteVideo').srcObject = null;
+  });
+
+  socket.on('error', ({ message }) => alert(message));
+
+  /* ========================= helper functions ========================= */
+  function send(type, payload) {
+    // collapse sdp/candidate into a flat envelope the server expects
+    const data = { room: ROOM, type };
+    if (payload && payload.sdp) data.sdp = payload.sdp;
+    if (payload && payload.candidate) data.candidate = payload.candidate;
+    socket.emit('signal', data);
+  }
+
+  async function createPeerConnection() {
+    pc = new RTCPeerConnection(ICE_CONFIG);
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.ontrack = ({ streams }) => {
+      document.getElementById('remoteVideo').srcObject = streams[0];
+    };
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) send('ice-candidate', { candidate });
+    };
+
+    pc.onconnectionstatechange = () => {
+      const s = pc.connectionState;
+      if (s === 'connected') setCallStatus('Connected', true);
+      if (s === 'disconnected' || s === 'failed') setCallStatus('Disconnected', false);
+    };
+  }
+
+  function enterCallPhase() {
+    document.getElementById('waiting-room').style.display = 'none';
+    document.getElementById('calling-room').style.display = '';
+    document.getElementById('localVideo').srcObject = localStream;
+  }
+
+  function setCallStatus(text, connected) {
+    const el = document.getElementById('callStatus');
+    const dot = el.querySelector('.status-dot');
+    el.className = `status-badge status-badge--${connected ? 'connected' : 'waiting'}`;
+    dot.style.background = connected ? '#27ae60' : '#e74c3c';
+    el.lastChild.textContent = ' ' + text;
+  }
+
+  function leaveCall() {
+    cleanup(); socket.disconnect(); window.location.href = '/';
+  }
+  function cancelAndLeave() {
+    cleanup(); socket.disconnect(); window.history.back();
+  }
+  function cleanup() {
+    if (pc) { pc.close(); pc = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  }
+
+</script>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

@@ -1,0 +1,121 @@
+<!-- 
+Profile page
+Created by Nuha Rilwan
+Last modified: 10/04/2026
+
+same as index page. pls update
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+    <h1 class="page-title">Your Profile</h1>
+    <p class="page-subtitle">View or edit your account details</p>
+
+    <div class="card card-sm">
+
+        <!-- Top section: Avatar + mini card -->
+        <div style="display:flex; align-items:flex-start; gap:15px;">
+
+            <!-- Avatar -->
+            <img src="{{ user.avatar(128) }}" alt="avatar">
+
+            <!-- Mini card with aligned details -->
+            <div class="card card-sm" style="padding:10px; flex:1;">
+                {% if user.last_seen %}
+                <p><strong>Last seen on:</strong> {{ moment(user.last_seen).format('LLL') }}</p>
+                {% endif %}
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Password:</strong> ********</p>
+            </div>
+
+        </div>
+
+        <!-- Buttons section -->
+        <div style="margin-top:15px;">
+            <button class="btn btn-primary btn-block" id="editProfileBtn">Edit Profile</button>
+        </div>
+
+        <div style="margin-top:15px;">
+            <button class="btn btn-primary btn-block" id="viewRoomsBtn">View Owned Rooms</button>
+        </div>
+
+        <!-- Logout -->
+        <div style="margin-top:10px;">
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-block" id="logoutBtn">
+                Logout
+            </a>
+        </div>
+
+
+    </div>
+
+    <!-- Edit Mode (hidden initially) -->
+    <div class="card card-sm" id="profileEdit" style="display:none;">
+        <div class="form-group">
+            <label>Username</label>
+            <input class="input" type="text" id="username">
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input class="input" type="email" id="email">
+        </div>
+
+        <div class="form-group">
+            <label>Password (leave blank to keep current)</label>
+            <input class="input" type="password" id="password">
+        </div>
+
+        <button class="btn btn-primary btn-block" id="updateProfileBtn">Update Profile</button>
+        <button class="btn btn-secondary btn-block" id="cancelEditBtn">Cancel</button>
+    </div>
+</main>
+
+<!-- Create Room Button -->
+<div style="margin-top:15px;">
+    <button class="btn btn-success btn-block" id="createRoomBtn">+ Create New Room</button>
+</div>
+
+<!-- Create Room Panel (hidden initially) -->
+<div class="card card-sm" id="createRoomPanel" style="display:none; margin-top:15px;">
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">
+        A unique room code will be generated and saved when you click finish.
+    </p>
+    <form method="POST" action="{{ url_for('main.create_room') }}">
+    {{ form.hidden_tag() }}
+    <button type="submit" class="btn btn-success btn-block">Finish Creating New Room</button>
+    <button type="button" class="btn btn-secondary btn-block" id="cancelCreateRoomBtn" style="margin-top:8px;">
+        Cancel
+    </button>
+</form>
+</div>
+
+<script>
+    // Edit profile toggle (already implied by your existing buttons)
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+        document.getElementById('profileEdit').style.display = 'block';
+    });
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+        document.getElementById('profileEdit').style.display = 'none';
+    });
+
+    // Create room toggle
+    document.getElementById('createRoomBtn').addEventListener('click', () => {
+        document.getElementById('createRoomPanel').style.display = 'block';
+        document.getElementById('createRoomBtn').style.display = 'none';
+    });
+    document.getElementById('cancelCreateRoomBtn').addEventListener('click', () => {
+        document.getElementById('createRoomPanel').style.display = 'none';
+        document.getElementById('createRoomBtn').style.display = 'block';
+    });
+</script>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

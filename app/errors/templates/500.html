@@ -1,0 +1,15 @@
+<!-- 
+Error page for 500 Internal Server Error
+Created by Shivangi Sritharan
+Last modified: 10/04/2026
+
+same as index page. pls update 
+-->
+
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>An unexpected error has occurred</h1>
+    <p>The administrator has been notified. Sorry for the inconvenience!</p>
+    <p><a href="{{ url_for('main.index') }}">Go back to the home page</a></p>
+{% endblock %}
