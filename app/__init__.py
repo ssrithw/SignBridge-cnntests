@@ -4,7 +4,7 @@ import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from app.errors.handlers import ratelimit_exceeded, page_not_found, internal_error
-from extensions import db, migrate, login, mail, moment, limiter, socketio, bcrypt
+from extensions import db, migrate, login, csrf, mail, moment, limiter, socketio, bcrypt
 import sqlalchemy as sa
 
 def create_app(config_class=Config):
@@ -14,6 +14,7 @@ def create_app(config_class=Config):
     # extensions
     db.init_app(app) # database
     migrate.init_app(app, db) # db migration engine
+    csrf.init_app(app) # protection against csrf attacks
     login.init_app(app) # login
     mail.init_app(app) #flask-mail for email operations
     moment.init_app(app) # flask-moment for timezone conversion

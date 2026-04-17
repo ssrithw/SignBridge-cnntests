@@ -71,9 +71,10 @@ python3 -m pip install requirements.txt
 python signbridge.py
 ```
 
-## Changelog - Version 0.3.3
-* Patched Flask-limiter to rate limit when sending forms instead of on page reload.
-* Added rate limiting to edit profile page.
+## Changelog - Version 0.3.6
+* Fixed version numbering
+* Patched CSRF protection
+
 
 ## Quick guide to repository navigation
 

@@ -13,6 +13,7 @@ from the app.
 from flask_sqlalchemy import SQLAlchemy # for database
 from flask_migrate import Migrate # for database migrations
 from flask_login import LoginManager # for logins
+from flask_wtf import CSRFProtect # to protect against csrf attacks
 from flask_mail import Mail # to manage email sending
 from flask_moment import Moment # for time stamps
 from flask_limiter import Limiter # for rate limiting
@@ -24,6 +25,7 @@ from flask_bcrypt import Bcrypt # for password hashing
 db = SQLAlchemy() # db represents the database object
 migrate = Migrate() # migrate represents the migration engine
 login = LoginManager()
+csrf = CSRFProtect()
 mail = Mail()
 moment = Moment() 
 socketio = SocketIO()
