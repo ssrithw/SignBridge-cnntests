@@ -90,7 +90,8 @@ async function initModel() {
     const res = await fetch(CLASSES_URL);
     if (!res.ok) throw new Error('Failed to load class_names.json');
     const raw = await res.json();
-    App.classNames = Array.isArray(raw) ? raw : Object.values(raw);
+    App.classNames = raw.class_names;
+    App.classIndex  = raw.class_index;
 
     App.model = await tf.loadGraphModel(MODEL_URL);
 

@@ -3,7 +3,7 @@ config.py
 Created by Shivangi Sritharan
 Last modified: 10/04/2026
 
-This file contains some security stuff. Dulneth please look at this I will know if you haven't.
+This file contains configuration stuff.
 '''
 
 import os
