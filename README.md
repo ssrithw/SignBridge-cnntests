@@ -115,16 +115,22 @@ The refactored version of this codebase uses Flask blueprints to manage applicat
 
 ```
 <b>Auth</b> maintains authentication components such as user logins and password resets.
+
 <b>Call</b> is responsible for the call room - handling the waiting room, model loading, WebRTC and SocketIO integrations
+
 <b>Core</b> is NOT a blueprint. It houses utilities reused across components.
+
 <b>Errors</b> contains error handlers for HTTP errors.
+
 <b>Help</b>, while not strictly necessitated by code, houses the static help pages.
-<b>Main</b> is responsible for the index page and various static pages that don't belong elsewhere
+
+<b>Main</b> is responsible for the index page and various static pages that don't belong elsewhere.
+
 <b>User</b> handles non-authentication-required components related to users, such as the ability to edit your profile.
 
 static/ and templates/ are used to house CSS, JS and HTML as normal. The folder structure in /templates/ follows the structure of the blueprints. Additionally, it contains a folder, /partials/, which houses the navbar and footer HTML. `base.html` is the base template reused across every webpage and therefore does not belong to any folder.
 
-Outside of the blueprints, `config.py` is used to define configuration settings for Flask. It references an `.env` file which I have NOT pushed to GitHub due security concerns - please let me know if this causes you issues. `extensions.py` is used to initialize all the extensions relevant to the application (e.g. flask-limiter, flask-login). `models.py` contains the database models. app/\__init__.py initializes the application. `signbridge.py` calls `create_app()` from app/\__init__.py to start the application. Please let me know if you have any questions.
+Outside of the blueprints, `config.py` is used to define configuration settings for Flask. `extensions.py` is used to initialize all the extensions relevant to the application (e.g. flask-limiter, flask-login). `models.py` contains the database models. app/\__init__.py initializes the application. `signbridge.py` calls `create_app()` from app/\__init__.py to start the application. `direc.py` is not part of the application, I pushed it by mistake and will remove it in a later update. Please let me know if you have any questions.
 
 ## todo
 * let users switch mic and cam off if needed
