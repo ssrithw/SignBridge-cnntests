@@ -10,7 +10,8 @@ from app.models import User
 
 app = create_app()
 
-# this is used to test database operations
+# this context processor is used to test database operations
+# remove it in production
 @app.shell_context_processor
 def make_shell_context():
     return {'sa': sa, 'so': so, 'db': db, 'User': User}

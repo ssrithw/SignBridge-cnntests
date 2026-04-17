@@ -11,8 +11,7 @@ from typing import Optional # to let values be a specific type or None (for null
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from flask import current_app
-from extensions import db, login
-from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db, login, bcrypt
 from flask_login import UserMixin # this helper implements methods required by flask-login's session mgmt system
 from hashlib import md5
 from time import time
@@ -32,11 +31,14 @@ class User(UserMixin, db.Model):
     # email is email 
     email: so.Mapped[str] = so.mapped_column(sa.String(100), index=True, unique=True, nullable=False)
 
-    # we store password hashes instead of raw passwords for security reasons. dulitha or dulneth please explain
-    password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256), nullable=False)
+    # we store password hashes instead of raw passwords for security reasons
+    password_hash: so.Mapped[str] = so.mapped_column(sa.String(128), nullable=False)
 
     # last seen isnt necessary but is nice
     last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    # is_admin checks if a user is admin or not
+    is_admin: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, nullable=False)
 
     # orm relationships for better querying
     rooms = db.relationship(
@@ -57,12 +59,12 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return '<User {}>'.format(self.username)
     
-    # we use werkzeug for password hashing and checking
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+    # we use bcrypt for password hashing and checking
+    def set_password(self, password: str):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8') # function returns bytes so it has to be decoded
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+    def check_password(self, password: str) -> bool:
+        return bcrypt.check_password_hash(self.password_hash, password)
     
     # add profile pictures with Gravatar
     def avatar(self, size):
@@ -77,15 +79,23 @@ class User(UserMixin, db.Model):
             {'reset_password': self.id, 'exp': time() + expires_in},
             current_app.config['SECRET_KEY'], algorithm='HS256')
     
+    def is_admin_user(self) -> bool:
+        return self.is_admin
+    
     # invokable from the class itself
     @staticmethod
     def verify_reset_password_token(token):
         try:
-            id = jwt.decode(token, current_app.config['SECRET_KEY'],
-                            algorithms=['HS256'])['reset_password']
-        except:
-            return
-        return db.session.get(User, id)
+            data = jwt.decode(
+                token,
+                current_app.config['SECRET_KEY'],
+                algorithms=['HS256']
+            )
+            return db.session.get(User, data['reset_password'])
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
 
 class Room(db.Model):
     # room_id

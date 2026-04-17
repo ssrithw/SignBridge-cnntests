@@ -8,7 +8,7 @@ application. It reuses code from the deprecated app.py but
 is part of the new modularization effort.
 '''
 
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import current_user, login_required
 import sqlalchemy as sa
 from extensions import db
@@ -30,19 +30,23 @@ def edit_profile():
     form = EditProfileForm(current_user.username, current_user.email)
 
     if form.validate_on_submit():
+        changes = [] # used to log changes without exposing the values to the viewer
         # update username/email
         if form.username.data:
+            changes.append(f"username {current_user.username} has changed to new username: {form.username.data}")
             current_user.username = form.username.data
 
         if form.email.data:
+            changes.append(f"email {current_user.email} has changed to new email: {form.email.data}")
             current_user.email = form.email.data
 
         # update password if provided
         if form.new_password.data:
+            changes.append("password has been updated")
             current_user.set_password(form.new_password.data)
 
         db.session.commit()
-
+        current_app.logger.info(f"Profile updated: user_id={current_user.id} changes={changes} ip={request.remote_addr}")
         flash("Profile updated successfully")
 
         return redirect(url_for('user.profile'))

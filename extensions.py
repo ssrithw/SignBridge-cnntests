@@ -18,6 +18,7 @@ from flask_moment import Moment # for time stamps
 from flask_limiter import Limiter # for rate limiting
 from flask_limiter.util import get_remote_address # for rate limiting
 from flask_socketio import SocketIO # for websocket access
+from flask_bcrypt import Bcrypt # for password hashing
 
 # initialize all modules
 db = SQLAlchemy() # db represents the database object
@@ -31,6 +32,7 @@ limiter = Limiter(
     default_limits=["200 per minute"],
     # storage_uri has been moved to config.py
 )
+bcrypt = Bcrypt()
 
 login.login_view = 'auth.login'
 login.login_message = ('Please log in to access this page.')

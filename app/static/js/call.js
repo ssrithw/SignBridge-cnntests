@@ -1,15 +1,16 @@
-/* app/static/js/call.js*/
+/* app/static/js/call.js */
 
-import { initChat, sendChatMessage } from "./chat.js";
+import { initChat } from '/static/js/chat.js';
 
 // ================= CONFIG =================
-const MODEL_URL = '/static/models/mobilenet-slsl-1/model.json';
+const MODEL_URL   = '/static/models/mobilenet-slsl-1/model.json';
 const CLASSES_URL = '/static/models/mobilenet-slsl-1/class_names.json';
 
-const INPUT_SIZE = 128;
+const INPUT_SIZE           = 128;
 const CONFIDENCE_THRESHOLD = 0.55;
-const TOTAL_SECONDS = 5;
-const CAPTURE_AT_SECOND = 4; // seconds remaining on the countdown when we capture
+const TOTAL_SECONDS        = 5;
+// Capture near the END of the countdown so the user has time to pose.
+const CAPTURE_AT_SECOND    = 2;
 
 const ICE_CONFIG = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -17,8 +18,9 @@ const ICE_CONFIG = {
 
 // ================= APP STATE =================
 const App = {
-    room: window.ROOM
-        || (document.getElementById('waitRoomCode')?.textContent || '').trim(),
+    room: window.ROOM ||
+          (document.getElementById('waitRoomCode') &&
+           document.getElementById('waitRoomCode').textContent.trim()) || '',
 
     stream: null,
     streamReady: null,
@@ -30,29 +32,28 @@ const App = {
     pc: null,
 
     pendingSignals: [],
-    remoteDescSet: false,
-    makingOffer: false,
     role: null,
-    callActive: false
+
+    // recognition state
+    countdownTimer: null,
+    secondsRemaining: TOTAL_SECONDS,
+    isRecognizing: false,
+
+    // call state
+    callStarted: false
 };
 
 // ================= BOOT =================
 async function bootApp() {
     try {
-        if (!App.room) {
-            console.error('No room code available; aborting boot.');
-            setRecogStatus('Missing room code');
-            return;
-        }
+        initUI();
         await initMedia();
         await initModel();
         initSocket();
-        initUI();
-        window.addEventListener('beforeunload', cleanup);
-        window.addEventListener('pagehide', cleanup);
+        wireUnloadCleanup();
     } catch (err) {
         console.error('Boot failed:', err);
-        setRecogStatus('Startup error: ' + (err?.message || err));
+        setRecogStatus('⚠ Startup failed: ' + (err.message || err));
     }
 }
 
@@ -60,17 +61,24 @@ async function bootApp() {
 async function initMedia() {
     try {
         App.streamReady = navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: { width: { ideal: 640 }, height: { ideal: 480 } },
             audio: true
         });
-
         App.stream = await App.streamReady;
 
         const preview = document.getElementById('waitPreview');
-        if (preview) preview.srcObject = App.stream;
+        if (preview) {
+            preview.srcObject  = App.stream;
+            preview.muted      = true;
+            preview.playsInline = true;
+        }
+
+        const waitStatus = document.getElementById('waitPreviewStatus');
+        if (waitStatus) waitStatus.textContent = '';
     } catch (err) {
-        console.error('getUserMedia failed:', err);
-        setRecogStatus('Camera/mic permission denied');
+        const waitStatus = document.getElementById('waitPreviewStatus');
+        if (waitStatus) waitStatus.textContent = 'Camera/mic access denied.';
+        setRecogStatus('⚠ Camera/mic access denied');
         throw err;
     }
 }
@@ -80,25 +88,19 @@ async function initModel() {
     setRecogStatus('Loading model…');
 
     const res = await fetch(CLASSES_URL);
-    if (!res.ok) throw new Error('class_names.json HTTP ' + res.status);
-
+    if (!res.ok) throw new Error('Failed to load class_names.json');
     const raw = await res.json();
     App.classNames = Array.isArray(raw) ? raw : Object.values(raw);
 
     App.model = await tf.loadGraphModel(MODEL_URL);
 
-    // Warmup pass so the first real capture is fast.
-    try {
-        const warm = tf.zeros([1, INPUT_SIZE, INPUT_SIZE, 3]);
-        const out = App.model.predict(warm);
-        // predict() may return a tensor or an array of tensors.
-        const tensors = Array.isArray(out) ? out : [out];
-        await Promise.all(tensors.map(t => t.data()));
-        tensors.forEach(t => t.dispose());
-        warm.dispose();
-    } catch (e) {
-        console.warn('Model warmup skipped:', e);
-    }
+    // Warm up so the first real inference isn't slow.
+    tf.tidy(() => {
+        const dummy = tf.zeros([1, INPUT_SIZE, INPUT_SIZE, 3]);
+        const out = App.model.predict(dummy);
+        if (Array.isArray(out)) out.forEach(t => t.dispose());
+        else out.dispose();
+    });
 
     setRecogStatus('Model ready — press ▶ to start');
     const btn = document.getElementById('btnStartRecog');
@@ -111,26 +113,18 @@ function initSocket() {
 
     App.socket.emit('join_room', { room: App.room });
 
-
     App.socket.on('role', ({ role }) => {
         App.role = role;
     });
 
     App.socket.on('peer_ready', async () => {
-        // Guard: only start a call flow once per peer session.
-        if (App.callActive) return;
-        App.callActive = true;
+        if (App.callStarted) return;       // idempotent against repeat emits
+        App.callStarted = true;
         await startCall();
     });
 
     App.socket.on('signal', async (msg) => {
-        // If PC doesn't exist yet, queue everything.
         if (!App.pc) {
-            App.pendingSignals.push(msg);
-            return;
-        }
-        // PC exists but remote description may not yet be set — queue ICE.
-        if (msg.type === 'ice-candidate' && !App.remoteDescSet) {
             App.pendingSignals.push(msg);
             return;
         }
@@ -141,19 +135,32 @@ function initSocket() {
         setCallStatus('Peer left', false);
         const remote = document.getElementById('remoteVideo');
         if (remote) remote.srcObject = null;
-        tearDownPeer();
+
+        // Tear down so a fresh peer_ready can build a clean connection.
+        if (App.pc) {
+            try { App.pc.close(); } catch (_) {}
+            App.pc = null;
+        }
+        App.pendingSignals = [];
+        App.callStarted    = false;
     });
+
+    App.socket.on('error', (data) => {
+        const msg = (data && data.message) || 'Signaling error';
+        setRecogStatus('⚠ ' + msg);
+    });
+
+    // Hook the chat module onto the SAME socket — no second io() connection.
+    initChat(App.socket, () => App.room);
 }
 
 // ================= CALL START =================
 async function startCall() {
     enterCallPhase();
-
     await App.streamReady;
 
     if (!App.pc) {
         App.pc = new RTCPeerConnection(ICE_CONFIG);
-        App.remoteDescSet = false;
 
         App.stream.getTracks().forEach(track => {
             App.pc.addTrack(track, App.stream);
@@ -161,7 +168,10 @@ async function startCall() {
 
         App.pc.ontrack = (event) => {
             const remote = document.getElementById('remoteVideo');
-            if (remote) remote.srcObject = event.streams[0];
+            if (remote) {
+                remote.srcObject   = event.streams[0];
+                remote.playsInline = true;
+            }
         };
 
         App.pc.onicecandidate = (event) => {
@@ -175,24 +185,27 @@ async function startCall() {
         };
 
         App.pc.onconnectionstatechange = () => {
-            const state = App.pc?.connectionState;
+            const state = App.pc ? App.pc.connectionState : 'closed';
             if (state === 'connected') {
                 setCallStatus('Connected', true);
-            } else if (state === 'failed' || state === 'disconnected') {
+            } else if (
+                state === 'failed' ||
+                state === 'disconnected' ||
+                state === 'closed'
+            ) {
                 setCallStatus('Disconnected', false);
-            } else if (state === 'closed') {
-                setCallStatus('Closed', false);
             }
         };
     }
 
-    // Drain any signals that arrived before pc was ready.
-    await drainPendingSignals();
+    // Flush any signals that arrived before App.pc existed.
+    while (App.pendingSignals.length) {
+        await handleSignal(App.pendingSignals.shift());
+    }
 
-    // Only the caller sends the initial offer, and only once.
-    if (App.role === 'caller' && !App.makingOffer && !App.pc.currentLocalDescription) {
+    if (App.role === 'caller') {
         try {
-            App.makingOffer = true;
+            if (App.pc.signalingState !== 'stable') return; // glare guard
             const offer = await App.pc.createOffer();
             await App.pc.setLocalDescription(offer);
 
@@ -202,66 +215,41 @@ async function startCall() {
                 sdp: App.pc.localDescription
             });
         } catch (err) {
-            console.error('Offer creation failed:', err);
-        } finally {
-            App.makingOffer = false;
+            console.error('createOffer failed:', err);
         }
     }
-}
-
-async function drainPendingSignals() {
-    // Process non-ICE first so remote description gets set before we add candidates.
-    const nonIce = App.pendingSignals.filter(m => m.type !== 'ice-candidate');
-    const ice = App.pendingSignals.filter(m => m.type === 'ice-candidate');
-    App.pendingSignals = [];
-
-    for (const m of nonIce) await handleSignal(m);
-    for (const m of ice) await handleSignal(m);
 }
 
 // ================= SIGNALING =================
 async function handleSignal({ type, sdp, candidate }) {
     if (!App.pc) return;
-
     try {
         switch (type) {
             case 'offer': {
                 await App.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                App.remoteDescSet = true;
-
                 const answer = await App.pc.createAnswer();
                 await App.pc.setLocalDescription(answer);
-
                 App.socket.emit('signal', {
                     room: App.room,
                     type: 'answer',
                     sdp: App.pc.localDescription
                 });
-
-                // Flush any ICE candidates that arrived before the offer.
-                await drainPendingSignals();
                 break;
             }
-
             case 'answer': {
-                await App.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                App.remoteDescSet = true;
-                await drainPendingSignals();
+                if (App.pc.signalingState === 'have-local-offer') {
+                    await App.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                }
                 break;
             }
-
             case 'ice-candidate': {
-                if (!candidate) break;
-                if (!App.remoteDescSet) {
-                    // Shouldn't normally reach here, but be defensive.
-                    App.pendingSignals.push({ type, candidate });
-                    break;
-                }
-                try {
-                    await App.pc.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (e) {
-                    // Benign races after close/teardown — log and continue.
-                    console.warn('addIceCandidate failed:', e);
+                if (candidate) {
+                    try {
+                        await App.pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (e) {
+                        // Usually benign — ICE arrived before remote SDP was set.
+                        console.warn('addIceCandidate:', e.message);
+                    }
                 }
                 break;
             }
@@ -271,183 +259,176 @@ async function handleSignal({ type, sdp, candidate }) {
     }
 }
 
-function tearDownPeer() {
-    if (App.pc) {
-        try { App.pc.ontrack = null; App.pc.onicecandidate = null; } catch (_) { }
-        try { App.pc.close(); } catch (_) { }
-        App.pc = null;
-    }
-    App.remoteDescSet = false;
-    App.pendingSignals = [];
-    App.callActive = false;
-    App.makingOffer = false;
-}
-
 // ================= UI =================
 function initUI() {
-    const wait = document.getElementById('waitRoomCode');
-    const call = document.getElementById('callRoomCode');
-    if (wait) wait.textContent = App.room;
-    if (call) call.textContent = App.room;
+    const waitCode = document.getElementById('waitRoomCode');
+    const callCode = document.getElementById('callRoomCode');
+    if (waitCode) waitCode.textContent = App.room;
+    if (callCode) callCode.textContent = App.room;
 
     const startBtn = document.getElementById('btnStartRecog');
-    if (startBtn) startBtn.addEventListener('click', startRecognition);
+    if (startBtn) startBtn.disabled = true;   // enabled after model loads
 
-    const clearBtn = document.getElementById('btnClearTranscript');
-    if (clearBtn) clearBtn.addEventListener('click', clearTranscript);
+    const stopBtn = document.getElementById('btnStopRecog');
+    if (stopBtn) stopBtn.disabled = true;
 }
 
 function enterCallPhase() {
-    const waitRoom = document.getElementById('waiting-room');
-    const callRoom = document.getElementById('calling-room');
-    if (waitRoom) waitRoom.style.display = 'none';
-    if (callRoom) callRoom.style.display = '';
+    const wait = document.getElementById('waiting-room');
+    const call = document.getElementById('calling-room');
+    if (wait) wait.style.display = 'none';
+    if (call) call.style.display = '';
 
-    if (App.stream) {
-        const localVideo = document.getElementById('localVideo');
-        if (localVideo) localVideo.srcObject = App.stream;
-    }
-
-    // ✅ INIT CHAT HERE
-    initChat(App.socket, () => App.room);
-
-    // ✅ BIND SEND BUTTON HERE
-    const btn = document.getElementById("sendChatBtn");
-    if (btn) {
-        btn.addEventListener("click", () => {
-            sendChatMessage(() => App.room);
-        });
+    const local = document.getElementById('localVideo');
+    if (local && App.stream) {
+        local.srcObject   = App.stream;
+        local.muted       = true;
+        local.playsInline = true;
     }
 }
 
 function setCallStatus(text, ok) {
     const el = document.getElementById('callStatus');
     if (!el) return;
-    const dot = el.querySelector('.status-dot');
-    const textEl = document.getElementById('callStatusText');
 
     el.className = `status-badge status-badge--${ok ? 'connected' : 'waiting'}`;
+
+    const dot = el.querySelector('.status-dot');
     if (dot) dot.style.background = ok ? '#27ae60' : '#e74c3c';
+
+    const textEl = document.getElementById('callStatusText');
     if (textEl) textEl.textContent = text;
 }
 
 // ================= RECOGNITION =================
-let countdownTimer = null;
-let secondsRemaining = TOTAL_SECONDS;
-let inferenceInFlight = false;
-
 function startRecognition() {
+    if (App.isRecognizing) return;
     if (!App.model) return setRecogStatus('Model not ready');
-    if (countdownTimer) return; // already running
 
-    // Prefer the in-call video; fall back to the waiting-room preview so the
-    // feature is usable before a peer has joined.
-    const video = getActiveVideoEl();
-    if (!video || video.readyState < 2) return setRecogStatus('Video not ready');
+    const video = document.getElementById('localVideo');
+    if (!video || video.readyState < 2 || !video.videoWidth) {
+        return setRecogStatus('Video not ready');
+    }
 
-    const btn = document.getElementById('btnStartRecog');
-    if (btn) btn.disabled = true;
+    App.isRecognizing = true;
 
-    secondsRemaining = TOTAL_SECONDS;
+    const startBtn = document.getElementById('btnStartRecog');
+    const stopBtn  = document.getElementById('btnStopRecog');
+    if (startBtn) startBtn.disabled = true;
+    if (stopBtn)  stopBtn.disabled  = false;
+
+    App.secondsRemaining = TOTAL_SECONDS;
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) {
         timerEl.style.display = 'block';
-        timerEl.textContent = secondsRemaining;
+        timerEl.textContent   = App.secondsRemaining;   // show starting value immediately
     }
 
-    countdownTimer = setInterval(() => {
-        // Capture when the displayed number equals CAPTURE_AT_SECOND.
-        if (secondsRemaining === CAPTURE_AT_SECOND) {
-            captureAndInfer().catch(e => console.error(e));
+    if (App.countdownTimer) {
+        clearInterval(App.countdownTimer);
+        App.countdownTimer = null;
+    }
+
+    App.countdownTimer = setInterval(() => {
+        if (App.secondsRemaining === CAPTURE_AT_SECOND) {
+            captureAndInfer();
         }
 
-        secondsRemaining -= 1;
+        if (timerEl) timerEl.textContent = App.secondsRemaining;
+        App.secondsRemaining--;
 
-        if (secondsRemaining < 0) {
-            clearInterval(countdownTimer);
-            countdownTimer = null;
-            if (timerEl) timerEl.style.display = 'none';
-            if (btn) btn.disabled = false;
-            setRecogStatus('Done — press ▶ again');
-            return;
+        if (App.secondsRemaining < 0) {
+            finishRecognition('Done — press ▶ again');
         }
-
-        if (timerEl) timerEl.textContent = secondsRemaining;
     }, 1000);
 }
 
-function getActiveVideoEl() {
-    const local = document.getElementById('localVideo');
-    if (local && local.srcObject && local.readyState >= 2) return local;
-    const wait = document.getElementById('waitPreview');
-    if (wait && wait.srcObject && wait.readyState >= 2) return wait;
-    return local || wait || null;
+function stopRecognition() {
+    if (!App.isRecognizing) return;
+    finishRecognition('Stopped');
+}
+
+function finishRecognition(statusMsg) {
+    if (App.countdownTimer) {
+        clearInterval(App.countdownTimer);
+        App.countdownTimer = null;
+    }
+    App.isRecognizing = false;
+
+    const timerEl = document.getElementById('timerDisplay');
+    if (timerEl) timerEl.style.display = 'none';
+
+    const startBtn = document.getElementById('btnStartRecog');
+    const stopBtn  = document.getElementById('btnStopRecog');
+    if (startBtn) startBtn.disabled = !App.model;
+    if (stopBtn)  stopBtn.disabled  = true;
+
+    setRecogStatus(statusMsg);
 }
 
 async function captureAndInfer() {
-    if (inferenceInFlight) return;
-    inferenceInFlight = true;
-
-    const video = getActiveVideoEl();
+    const video  = document.getElementById('localVideo');
     const canvas = document.getElementById('captureCanvas');
-    if (!video || !canvas) {
-        inferenceInFlight = false;
-        return setRecogStatus('Missing video/canvas');
+    if (!video || !canvas || !video.videoWidth) {
+        setRecogStatus('Video not ready for capture');
+        return;
     }
 
-    canvas.width = INPUT_SIZE;
+    canvas.width  = INPUT_SIZE;
     canvas.height = INPUT_SIZE;
 
     const ctx = canvas.getContext('2d');
-    ctx.save();
-    ctx.translate(INPUT_SIZE, 0);
-    ctx.scale(-1, 1); // mirror to match the on-screen preview
+    // Draw the non-mirrored frame so orientation matches training data.
     ctx.drawImage(video, 0, 0, INPUT_SIZE, INPUT_SIZE);
-    ctx.restore();
 
-    const inputTensor = tf.tidy(() =>
-        tf.browser.fromPixels(canvas)
+    const tensor = tf.tidy(() => {
+        return tf.browser.fromPixels(canvas)
             .toFloat()
             .div(255.0)
-            .expandDims(0)
-    );
+            .expandDims(0);
+    });
 
-    let predTensor = null;
+    let predTensor   = null;
+    let extraTensors = [];
     try {
-        // predict() is the safe API for converted Keras/TF graph models.
-        const out = App.model.predict(inputTensor);
-        predTensor = Array.isArray(out) ? out[0] : out;
+        // predict() is safer than execute() for standard input-output graphs.
+        const out = App.model.predict(tensor);
+        if (Array.isArray(out)) {
+            predTensor   = out[0];
+            extraTensors = out.slice(1);
+        } else {
+            predTensor = out;
+        }
 
         const predictions = await predTensor.data();
 
-        // Argmax.
         let maxIdx = 0;
         for (let i = 1; i < predictions.length; i++) {
             if (predictions[i] > predictions[maxIdx]) maxIdx = i;
         }
+
         const confidence = predictions[maxIdx];
-        const letter = App.classNames[maxIdx] ?? String(maxIdx);
+        const letter     = App.classNames[maxIdx] ?? String(maxIdx);
 
         if (confidence < CONFIDENCE_THRESHOLD) {
-            setRecogStatus(`Low confidence (${(confidence * 100).toFixed(1)}%)`);
-            const det = document.getElementById('detectedLetter');
-            if (det) det.textContent = '—';
+            setRecogStatus(
+                `No confident prediction (best: ${letter} @ ${(confidence * 100).toFixed(1)}%)`
+            );
             return;
         }
 
-        const det = document.getElementById('detectedLetter');
-        if (det) det.textContent = letter;
+        const letterEl = document.getElementById('detectedLetter');
+        if (letterEl) letterEl.textContent = letter;
+
         appendToTranscript(letter);
         setRecogStatus(`Detected: ${letter} (${(confidence * 100).toFixed(1)}%)`);
     } catch (err) {
-        console.error('Inference failed:', err);
+        console.error('Inference error:', err);
         setRecogStatus('⚠ Inference error: ' + err.message);
     } finally {
-        inputTensor.dispose();
-        if (predTensor && typeof predTensor.dispose === 'function') {
-            predTensor.dispose();
-        }
-        inferenceInFlight = false;
+        tensor.dispose();
+        if (predTensor) { try { predTensor.dispose(); } catch (_) {} }
+        extraTensors.forEach(t => { try { t.dispose(); } catch (_) {} });
     }
 }
 
@@ -456,18 +437,17 @@ function appendToTranscript(letter) {
     const box = document.getElementById('transcriptBox');
     if (!box) return;
 
-    // Replace the placeholder exactly once, using a data attribute instead of
-    // a style-selector (which would also match real entries).
-    if (box.dataset.empty !== 'false') {
-        box.innerHTML = '';
-        box.dataset.empty = 'false';
-    }
+    // Placeholder is the only span with italic styling — target it specifically
+    // so real letter spans are never wiped.
+    const placeholder = box.querySelector('span[style*="italic"]');
+    if (placeholder) placeholder.remove();
 
     const span = document.createElement('span');
-    span.className = 'transcript-letter';
-    span.textContent = letter;
+    span.textContent   = letter;
+    span.className     = 'transcript-letter';
     span.style.cssText = 'font-size:1.4rem;font-weight:700;margin:2px;';
     box.appendChild(span);
+
     box.scrollTop = box.scrollHeight;
 }
 
@@ -475,11 +455,10 @@ function clearTranscript() {
     const box = document.getElementById('transcriptBox');
     if (box) {
         box.innerHTML =
-            '<span class="transcript-placeholder" style="color:#aaa;font-style:italic;">Recognized letters will appear here…</span>';
-        box.dataset.empty = 'true';
+            '<span style="color:#aaa;font-style:italic;">Recognized letters will appear here…</span>';
     }
-    const det = document.getElementById('detectedLetter');
-    if (det) det.textContent = '—';
+    const letterEl = document.getElementById('detectedLetter');
+    if (letterEl) letterEl.textContent = '—';
 }
 
 function setRecogStatus(msg) {
@@ -487,27 +466,64 @@ function setRecogStatus(msg) {
     if (el) el.textContent = msg;
 }
 
-// ================= CLEANUP =================
+// ================= LEAVE / CANCEL / CLEANUP =================
+function leaveCall() {
+    cleanup();
+    // Let the rest of the app's navigation take over — send the user home.
+    window.location.href = '/';
+}
+
+function cancelAndLeave() {
+    cleanup();
+    window.location.href = '/';
+}
+
 function cleanup() {
-    tearDownPeer();
+    if (App.countdownTimer) {
+        clearInterval(App.countdownTimer);
+        App.countdownTimer = null;
+    }
+    App.isRecognizing = false;
+
+    if (App.pc) {
+        try { App.pc.close(); } catch (_) {}
+        App.pc = null;
+    }
 
     if (App.stream) {
         App.stream.getTracks().forEach(t => {
-            try { t.stop(); } catch (_) { }
+            try { t.stop(); } catch (_) {}
         });
         App.stream = null;
     }
 
-    if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
+    if (App.socket) {
+        try { App.socket.disconnect(); } catch (_) {}
     }
 
-    if (App.socket) {
-        try { App.socket.emit('leave_room', { room: App.room }); } catch (_) { }
-        try { App.socket.disconnect(); } catch (_) { }
-    }
+    App.pendingSignals = [];
+    App.callStarted    = false;
 }
 
+function wireUnloadCleanup() {
+    window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('pagehide',     cleanup);
+}
+
+// ================= EXPOSE TO window =================
+// call.html uses inline onclick="…" handlers. Because this file is loaded as
+// an ES module, top-level declarations are NOT on window, so the handlers
+// referenced from HTML must be published explicitly.
+window.startRecognition = startRecognition;
+window.stopRecognition  = stopRecognition;
+window.clearTranscript  = clearTranscript;
+window.leaveCall        = leaveCall;
+window.cancelAndLeave   = cancelAndLeave;
+
 // ================= START APP =================
-bootApp();
+// Modules are deferred, so DOM is already parsed — but guard anyway.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+    bootApp();
+}

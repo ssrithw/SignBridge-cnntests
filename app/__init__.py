@@ -4,7 +4,8 @@ import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from app.errors.handlers import ratelimit_exceeded, page_not_found, internal_error
-from extensions import db, migrate, login, mail, moment, limiter, socketio
+from extensions import db, migrate, login, mail, moment, limiter, socketio, bcrypt
+import sqlalchemy as sa
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -18,6 +19,7 @@ def create_app(config_class=Config):
     moment.init_app(app) # flask-moment for timezone conversion
     limiter.init_app(app) # flask-limiter for rate limiting
     socketio.init_app(app, async_mode='gevent', cors_allowed_origins='*') 
+    bcrypt.init_app(app)
 
     # register blueprints here
     # auth blueprint
@@ -55,31 +57,61 @@ def create_app(config_class=Config):
     from app.call import sockets
 
     if not app.debug and not app.testing:
+        import sqlalchemy as sa
+        from app.models import User
+
         if app.config['MAIL_SERVER']:
             auth = None
-            if app.config['MAIL_USERNAME'] or app.config['MAIL_PASSWORD']:
+            if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
                 auth = (app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            secure = None
-            if app.config['MAIL_USE_TLS']:
-                secure = ()
-            mail_handler = SMTPHandler(
+
+            secure = () if app.config['MAIL_USE_TLS'] else None
+
+            class DynamicSMTPHandler(SMTPHandler):
+                def emit(self, record):
+                    with app.app_context():
+                        admins = db.session.scalars(
+                            sa.select(User).where(User.is_admin == True)
+                        ).all()
+                        self.toaddrs = [u.email for u in admins if u.email]
+
+                    if not self.toaddrs:
+                        return
+
+                    super().emit(record)
+
+            mail_handler = DynamicSMTPHandler(
                 mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
                 fromaddr='no-reply@' + app.config['MAIL_SERVER'],
-                toaddrs=app.config['ADMINS'], subject='SignBridge Failure',
-                credentials=auth, secure=secure)
+                toaddrs=[],
+                subject='SignBridge Failure',
+                credentials=auth,
+                secure=secure
+            )
+
             mail_handler.setLevel(logging.ERROR)
             app.logger.addHandler(mail_handler)
 
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/signbridge.log', maxBytes=10240, backupCount=10)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+        log_dir = os.path.join(app.root_path, 'logs')
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+
+        file_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'signbridge.log'),
+            maxBytes=10240,
+            backupCount=10
+        )
+
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
 
         app.logger.setLevel(logging.INFO)
-        app.logger.info('SignBridge startup')
+        app.logger.info('SignBridge startup complete')
 
     from app import models
-    
+
     return app
