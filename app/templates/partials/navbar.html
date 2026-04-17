@@ -1,0 +1,26 @@
+<!--
+navbar.html
+
+houses the navbar idk man
+-->
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <a href="/" class="navbar-brand">
+        <img src="https://i.postimg.cc/G37BHLsC/Sand-Solutions-Logo.png" alt="Sand Solutions Logo" class="brand-logo">
+        SignBridge
+    </a>
+    <button class="navbar-hamburger" onclick="toggleMenu()">☰</button>
+    <ul class="navbar-links" id="navLinks">
+        <li><a href="{{ url_for('main.index') }}" class="{% if active_nav == 'home' %}active{% endif %}">Home</a></li>
+        <li><a href="{{ url_for('main.about') }}" class="{% if active_nav == 'about' %}active{% endif %}">About</a></li>
+        <li><a href="{{ url_for('help.help_index') }}" class="{% if active_nav == 'help' %}active{% endif %}">Help</a></li>
+        <li><a href="{{ url_for('main.contact') }}" class="{% if active_nav == 'contact' %}active{% endif %}">Contact</a></li>
+        {% if current_user.is_authenticated %} <!-- only show if user is logged in -->
+        <li><a href="{{ url_for('user.profile') }}" class="{% if active_nav == 'user' %}active{% endif %}">Profile</a></li>
+        <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+        {% else %}
+        <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+        {% endif %}
+    </ul>
+</nav>

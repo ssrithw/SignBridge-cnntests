@@ -1,0 +1,54 @@
+<!-- 
+Help page
+Created by Anuki Kithara
+Last modified: 10/04/2026
+
+add description
+-->
+
+<!-- uses the base template for header and footer -->
+ 
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+<!-- Main -->
+<main class="main">
+  <!-- Page Header -->
+  <h1 class="page-title">Help and Support</h1>
+  <p class="page-subtitle">View detailed tutorials and guides below</p>
+
+  <div class="container">
+    <!-- Grid Layout -->
+    <div class="grid-3">
+      <!-- Card 1 Video Tutorial-->
+      <div class="card text-center">
+        <img src="#" alt="Video Tutorial" style="width:100%;border-radius:var(--radius);margin-bottom:12px;">
+        <h3 class="section-title">Video Tutorial</h3>
+        <p class="section-text mb-24">Watch our Demo video on how to use the application.</p>
+        <a href="{{ url_for('help.video_tutorial') }}" class="btn btn-primary">Watch Now</a>
+      </div>
+
+      <!-- Card 2 User Guide-->
+      <div class="card text-center">
+        <img src="#" alt="User Guide" style="width:100%;border-radius:var(--radius);margin-bottom:12px;">
+        <h3 class="section-title">User Guide</h3>
+        <p class="section-text mb-24">Read step-by-step instructions on how to use the application.</p>
+        <button class="btn btn-primary">Read Guide</button>
+      </div>
+
+      <!-- Card 3 SLSL Alphabet-->
+      <div class="card text-center">
+        <img src="https://i.postimg.cc/g2d1bknb/SLSL-Eng-Ver.jpg" alt="SLSL Alphabet Chart"
+          style="width:100%;border-radius:var(--radius);margin-bottom:12px;">
+        <h3 class="section-title">SL Sign Language Chart</h3>
+        <p class="section-text mb-24">View the Sri Lankan Sign Language alphabet.</p>
+        <a href="{{ url_for('help.slslchart') }}" class="btn btn-primary">View Chart</a>
+      </div>
+    </div>
+  </div>
+</main>
+</main>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

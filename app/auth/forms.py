@@ -7,57 +7,49 @@ This file contains forms. Idk. Update later.
 '''
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, ValidationError, EqualTo
-import sqlalchemy as sa
-from app import db
-from app.models import User
+from wtforms import StringField, SubmitField, PasswordField, BooleanField
+from wtforms.validators import Email, EqualTo, DataRequired  
+from flask_login import current_user
+from app.core.validators import password_complexity, unique_email, unique_username
 
-# signup form - requires an email, id is indexed on email.
-# uses WTForms' Email validator and consequently the email-validator package.
-# todo use check_deliverability and allow_empty_local
-# add error messages maybe
+# signup form
+
+'''
+# Validating password input server-side
+Password must include:
+At least 6 characters
+At least one uppercase letter (A-Z)
+At least one lowercase letter (a-z)
+At least one number (0-9)
+At least one special character (!@#$%^&*)
+'''
 class SignupForm(FlaskForm):
     email = StringField(
-        validators=[DataRequired(), Email()],
+        validators=[DataRequired(), Email(), unique_email()],
         render_kw={"class": "input", "placeholder": "E-mail"}
     )
 
     username = StringField(
         'Username', 
-        validators=[DataRequired()],
+        validators=[DataRequired(), unique_username()],
         render_kw={"class": "input", "placeholder": "Username"}
         )
-    
+
     password = PasswordField(
         'Password', 
-        validators=[DataRequired()],
-        render_kw={"class": "input", "placeholder": "Password"}
+        validators=[DataRequired(), password_complexity],
+        render_kw={"class": "input", "placeholder": "Password", "id" : "password"}
         )
     # repeat password
-    password2 = PasswordField(
+    repeat_password = PasswordField(
         'Repeat Password', validators=[DataRequired(), EqualTo('password')],
-        render_kw={"class": "input", "placeholder": "Password"}
+        render_kw={"class": "input", "placeholder": "Repeat password"}
         )
     
     submit = SubmitField(
         'Sign Up',
         render_kw={"class": "btn btn-primary btn-block"}
-        )  
-    
-    # since usernames are unique, check if it already exists
-    def validate_username(self, username):
-        user = db.session.scalar(sa.select(User).where(
-            User.username == username.data))
-        if user is not None:
-            raise ValidationError(('Please use a different username.'))
-    
-    # similar for emails
-    def validate_email(self, email):
-        user = db.session.scalar(sa.select(User).where(
-            User.email == email.data))
-        if user is not None:
-            raise ValidationError(('Please use a different email address.'))
+        )
 
 # login form - this only requires a valid username and email
 # and provides an option to save your login for multiple sessions
@@ -98,7 +90,7 @@ class ResetPasswordForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()],
     render_kw={"class": "input", "placeholder": "Password"}
     )
-    password2 = PasswordField(
+    repeat_password = PasswordField(
         'Repeat Password', validators=[DataRequired(), EqualTo('password')],
         render_kw={"class": "input", "placeholder": "Repeat Password"}
     )

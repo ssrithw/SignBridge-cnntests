@@ -1,0 +1,110 @@
+<!-- 
+User registration page
+Created by Nuha Rilwan
+Last modified: 10/04/2026
+
+same as index page. pls update 
+-->
+
+<!-- uses the base template for header and footer -->
+{% extends "base.html" %}
+
+<!-- actual content of the page starts here -->
+{% block content %}
+
+<!-- Main -->
+<main class="main">
+    <h1 class="page-title">SignBridge</h1>
+    <p class="page-subtitle">Real-Time Sign Language Communication</p>
+
+    <!-- ===================================  new form starts here ============================ -->
+
+    <div class="card card-sm">
+        <form action="" method="post" novalidate> <!-- no validation done client-side -->
+            {{ form.hidden_tag() }} <!-- creates a unique token, used to prevent CSLR attacks -->
+
+            <!-- Email -->
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email() }}
+                {% for error in form.email.errors %}
+                <span style="color: red;">[{{ error }}]</span> <!-- returns error if not validated -->
+                {% endfor %}
+            </div>
+
+            <!-- Username -->
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username() }}
+                {% for error in form.username.errors %}
+                <span style="color: red;">[{{ error }}]</span> <!-- returns error if not validated -->
+                {% endfor %}
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(id="password") }}
+
+                {% for error in form.password.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+
+                <!-- Password requirements - these are validated both client-side and server side -->
+                 <!-- the client-side validation is handled with js in register.js -->
+                <div class="password-requirements" id="passwordRequirements"
+                    style="display:none; margin-top: 10px; font-size: 0.8em;">
+
+                    <p style="font-weight: bold; color: #333; margin-bottom: 8px;">
+                        Password must include:
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div class="req-item" id="reqLength" style="color: #e74c3c;">
+                            At least 6 characters
+                        </div>
+                        <div class="req-item" id="reqUpper" style="color: #e74c3c;">
+                            At least one uppercase letter (A-Z)
+                        </div>
+                        <div class="req-item" id="reqLower" style="color: #e74c3c;">
+                            At least one lowercase letter (a-z)
+                        </div>
+                        <div class="req-item" id="reqNumber" style="color: #e74c3c;">
+                            At least one number (0-9)
+                        </div>
+                        <div class="req-item" id="reqSpecial" style="color: #e74c3c;">
+                            At least one special character (!@#$%^&*)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- enter pw again -->
+            <div class="form-group">
+                {{ form.repeat_password.label(class="form-label") }}
+                {{ form.repeat_password() }}
+                {% for error in form.repeat_password.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <!-- Sign up button -->
+            <br>
+            {{ form.submit() }}
+
+            <div class="divider">OR</div>
+
+            <!-- alternatively, login  -->
+            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-block">
+                Already have an account? Log in here
+            </a>
+
+        </form>
+    </div>
+
+</main>
+
+<script src="/static/js/register.js"></script>
+
+{% endblock %}
+<!-- anything added below endblock WILL NOT show up in the page -->

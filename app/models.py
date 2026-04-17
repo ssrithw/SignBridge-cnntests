@@ -11,7 +11,7 @@ from typing import Optional # to let values be a specific type or None (for null
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from flask import current_app
-from app import db, login
+from extensions import db, login
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin # this helper implements methods required by flask-login's session mgmt system
 from hashlib import md5

@@ -7,21 +7,19 @@ This file contains the routes every web page in this
 application. It reuses code from the deprecated app.py but
 is part of the new modularization effort.
 '''
-
 from flask import render_template, flash, redirect, url_for, request
+from flask_login import current_user, login_user, logout_user
 from urllib.parse import urlsplit # used to redirect logged out users
-from flask_login import login_user, logout_user, current_user
+from datetime import datetime, timezone
 import sqlalchemy as sa
-from app import db, limiter
-from app.auth import bp
+from extensions import db, limiter
+from app.models import User
+from app.auth import auth_bp
 from app.auth.forms import LoginForm, SignupForm, ResetPasswordRequestForm, ResetPasswordForm
-from app.models import User 
-from app.auth.email import send_password_reset_email # imports the send password reset 
-                                                     # which is elsewhere since emails 
-                                                     # aren't authentication-related
+from app.auth.email import send_password_reset_email
 
 # route for login page
-@bp.route('/login', methods=['GET', 'POST']) # define http methods to send and receive data
+@auth_bp.route('/login', methods=['GET', 'POST']) # define http methods to send and receive data
 @limiter.limit("5 per minute")
 def login():
     # if user is authenticated, stop them from navigating back to login
@@ -47,16 +45,16 @@ def login():
             next_page = url_for('main.index')
         # redirect to whatever is in next_page
         return redirect(next_page)
-    return render_template('login.html', title='Log In', form=form)
+    return render_template('auth/login.html', title='Log In', form=form)
 
 # route for logout
-@bp.route('/logout')
+@auth_bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
 # route for registration page
-@bp.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/register', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def register():
     if current_user.is_authenticated:
@@ -69,10 +67,10 @@ def register():
         db.session.commit()
         flash('Congratulations, you are now a registered user!')
         return redirect(url_for('auth.login'))
-    return render_template('register.html', title='Register', form=form)
+    return render_template('auth/register.html', title='Register', form=form)
 
 # reset password request
-@bp.route('/reset_password_request', methods=['GET', 'POST'])
+@auth_bp.route('/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -82,13 +80,15 @@ def reset_password_request():
             sa.select(User).where(User.email == form.email.data))
         if user:
             send_password_reset_email(user)
-        flash('Check your email for the instructions to reset your password') # no doxxing
+        # note that this message is sent regardless of whether an email
+        # was actually sent or not - this is to prevent users from
+        # figuring out if an email is registered or not
+        flash('Check your email for the instructions to reset your password')
         return redirect(url_for('auth.login'))
-    return render_template('reset_password_request.html',
-                           title='Reset Password', form=form)
+    return render_template('auth/reset_password_request.html', title='Reset Password', form=form)
 
 # reset actual password
-@bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+@auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -101,4 +101,4 @@ def reset_password(token):
         db.session.commit()
         flash('Your password has been reset.')
         return redirect(url_for('auth.login'))
-    return render_template('reset_password.html', form=form)
+    return render_template('auth/reset_password.html', form=form)
