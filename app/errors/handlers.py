@@ -23,4 +23,3 @@ def internal_error(error):
     #db.session.rollback() # only useful if error was caused by a database mismatch
     return render_template('errors/500.html'), 500
 
-''' adding this because git won't check one line fixes '''

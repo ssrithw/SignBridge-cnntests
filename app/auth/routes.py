@@ -20,7 +20,7 @@ from app.auth.email import send_password_reset_email
 
 # route for login page
 @auth_bp.route('/login', methods=['GET', 'POST']) # define http methods to send and receive data
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute", methods=['POST'])
 def login():
     # if user is authenticated, stop them from navigating back to login
     if current_user.is_authenticated:
@@ -59,7 +59,7 @@ def logout():
 
 # route for registration page
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute", methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -76,7 +76,7 @@ def register():
 
 # reset password request
 @auth_bp.route('/reset_password_request', methods=['GET', 'POST'])
-@limiter.limit('5 per minute')
+@limiter.limit('5 per minute', methods=['POST'])
 def reset_password_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -97,7 +97,7 @@ def reset_password_request():
 
 # reset actual password
 @auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
-@limiter.limit('3 per minute')
+@limiter.limit('3 per minute', methods=['POST'])
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
