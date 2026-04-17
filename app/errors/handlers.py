@@ -16,9 +16,11 @@ def page_not_found(e):
 # 429 rate limit exceeded
 def ratelimit_exceeded(e):
     flash("Too many requests. Please slow down.", "warning")
-    return redirect(url_for('/')), 302 # temporary redirect
+    return redirect(url_for('main.index')), 302 # temporary redirect
 
 # 500 internal server error
 def internal_error(error):
     #db.session.rollback() # only useful if error was caused by a database mismatch
     return render_template('errors/500.html'), 500
+
+''' adding this because git won't check one line fixes '''
