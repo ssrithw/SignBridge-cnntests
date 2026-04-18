@@ -20,7 +20,7 @@ comments below.
     <p class="page-subtitle">Real-Time Sign Language Communication</p>
     <div class="card card-sm">
         <form action="" method="post" novalidate> <!-- no validation done client-side -->
-            {{ form.hidden_tag() }}  <!-- creates a unique token, used to prevent CSLR attacks -->
+            {{ form.hidden_tag() }} <!-- creates a unique token, used to prevent CSLR attacks -->
 
             <!-- User's name -->
             <div class="form-group">
@@ -32,7 +32,7 @@ comments below.
             <div class="form-group">
                 {{ form.room_code.label(class="form-label") }}
                 {{ form.room_code() }}
-                {% for error in form.room_code.errors %}              <!-- returns error if not validated -->
+                {% for error in form.room_code.errors %} <!-- returns error if not validated -->
                 <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
             </div>
@@ -41,12 +41,12 @@ comments below.
             {{ form.submit() }}
 
             <div class="divider">OR</div>
+        </form>
 
-            <!-- alternatively, create a new room  -->
-            <a href="{{ url_for('call.create_room') }}" class="btn btn-secondary btn-block">
-                Create a new room
-            </a>
-
+        <!-- alternatively, create a new room  -->
+        <form method="POST" action="{{ url_for('call.create_room') }}">
+            {{ create_form.hidden_tag() }}
+            {{ create_form.submit() }}
         </form>
 </main>
 

@@ -74,6 +74,7 @@ python signbridge.py
 ## Changelog - Version 0.3.7
 * Converted database from SQLite to PostgreSQL (SQLite still exists for fallback)
 * Patched CSRF token handling
+* Fixed HTML forms
 
 ## Quick guide to repository navigation
 

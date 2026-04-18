@@ -34,8 +34,10 @@ def join():
             flash('Room not found. Check the code and try again.')
             return redirect(url_for('call.join'))
         return redirect(url_for('call.call', room=code))
+    
+    create_form = CreateRoomForm()
 
-    return render_template('call/join.html', title='Join A Room', form=form)
+    return render_template('call/join.html', title='Join A Room', form=form, create_form=create_form)
 
 # route to create a new room and redirect to a waiting room
 @call_bp.route('/create-room', methods=['POST'])
