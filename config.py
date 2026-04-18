@@ -15,7 +15,7 @@ load_dotenv(os.path.join(basedir, '.env')) # set variables before class is const
 class Config:
     # secret key for token generation
     # todo: add a real secret key lol
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
 
     # the flask-SQLAlchemy extension takes the location of the application's 
     # database from the SQLALCHEMY_DATABASE_URI configuration variable
@@ -36,7 +36,7 @@ class Config:
 
     # the flask-limiter extension stores data in this
     # because limiter uses the limit library this is kept separate from sqlalchemy
-    RATELIMIT_STORAGE_URI = os.environ.get('STORAGE_URI')
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI')
     
     # admin email mailing list lol
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
