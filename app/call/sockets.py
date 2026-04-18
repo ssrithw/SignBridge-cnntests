@@ -1,8 +1,10 @@
 '''
 app/call/sockets.py
 
-Signaling + chat for SignBridge call rooms.
-Two-user rooms only. No video ever touches the server.
+Created by Anuki Kithara
+Last modified: 18/04/2026
+
+Signaling and chat for call rooms.
 '''
 
 import sqlalchemy as sa
@@ -17,7 +19,6 @@ from datetime import datetime, timezone
 rooms       = {}     # room_code -> set of sids
 sid_to_room = {}     # sid        -> room_code
 room_lock   = Lock()
-
 
 def _get_room(code: str):
     return db.session.scalar(

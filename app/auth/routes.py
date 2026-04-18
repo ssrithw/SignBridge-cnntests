@@ -1,11 +1,10 @@
 '''
-routes.py
+app/auth/routes.py
 Created by Shivangi Sritharan
-Last modified: 17/04/2026
+Last modified: 18/04/2026
 
-This file contains the routes every web page in this
-application. It reuses code from the deprecated app.py but
-is part of the new modularization effort.
+This file contains the code for authentication 
+related page routes.
 '''
 
 from flask import render_template, flash, redirect, url_for, request, current_app
@@ -20,7 +19,7 @@ from app.auth.email import send_password_reset_email
 
 # route for login page
 @auth_bp.route('/login', methods=['GET', 'POST']) # define http methods to send and receive data
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute", methods=['POST'])
 def login():
     # if user is authenticated, stop them from navigating back to login
     if current_user.is_authenticated:
@@ -59,16 +58,21 @@ def logout():
 
 # route for registration page
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute", methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = SignupForm()
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
+        user = User(username=form.username.data, email=form.email.data.lower().strip()) # normalize email
         user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except sa.exc.IntegrityError:
+            db.session.rollback()
+            flash('Username or email already exists.')
+            return redirect(url_for('auth.register'))
         current_app.logger.info(f"New user registered. Username: {user.username} and email: ({user.email})")
         flash('Congratulations, you are now a registered user!')
         return redirect(url_for('auth.login'))
@@ -76,7 +80,7 @@ def register():
 
 # reset password request
 @auth_bp.route('/reset_password_request', methods=['GET', 'POST'])
-@limiter.limit('5 per minute')
+@limiter.limit('5 per minute', methods=['POST'])
 def reset_password_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -97,7 +101,7 @@ def reset_password_request():
 
 # reset actual password
 @auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
-@limiter.limit('3 per minute')
+@limiter.limit('3 per minute', methods=['POST'])
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -119,3 +123,22 @@ def reset_password(token):
         flash('Your password has been reset. You can now log in.')
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', form=form)
+
+# testing limiter remove later
+from extensions import csrf
+
+@auth_bp.route("/rate-limit-test", methods=["POST"])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def rate_limit_test():
+    print("ROUTE HIT")
+    print("IP:", request.headers.get("X-Forwarded-For"), request.remote_addr)
+    return {"ok": True}
+
+@auth_bp.route("/debug-limiter")
+def debug_limiter():
+    from extensions import limiter
+    return {
+        "limiter_class": str(type(limiter)),
+        "has_storage": hasattr(limiter, "_storage"),
+    }

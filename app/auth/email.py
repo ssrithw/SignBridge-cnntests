@@ -1,10 +1,11 @@
 '''
-email.py
+app/auth/email.py
 Created by Shivangi Sritharan
-Last modified 10/04/2026
+Last modified 18/04/2026
 
-Email wrapper that sends error logs and stuff
-This particular emails.py sends password reset emails.
+This file contains a function that sends a password
+reset email to a user. It is considered separate from 
+the other email-related functions due to requiring tokens. 
 '''
 from flask import render_template, current_app
 from app.core.email import send_email

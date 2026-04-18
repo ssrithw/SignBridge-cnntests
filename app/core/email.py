@@ -1,9 +1,11 @@
 '''
-core/email.py
+app/core/email.py
 Created by Shivangi Sritharan
-Last modified 10/04/2026
+Last modified 18/04/2026
 
-Email wrapper that sends error logs and stuff
+This file contains functions related to
+emailing users. These functions are reused
+across all blueprints that use emails.
 '''
 from threading import Thread # for async mail sending
 from flask import render_template, current_app

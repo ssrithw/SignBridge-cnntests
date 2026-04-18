@@ -1,10 +1,11 @@
 '''
-call/services.py
+app/call/services.py
 
 Created by Shivangi Sritharan
-Last modified: 11/04/2026
+Last modified: 18/04/2026
 
-Contains various helpers and utilities.
+Contains various helpers related
+to the call room.
 '''
 
 import random

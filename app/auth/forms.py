@@ -1,9 +1,11 @@
 '''
-forms.py
+app/auth/forms.py
 Created by Shivangi Sritharan
-Last modified: 10/04/2026
+Last modified: 18/04/2026
 
-This file contains forms. Idk. Update later.
+This file contains the server-side code for 
+authentication-related forms. The forms are 
+implemented with Flask-WTForms.
 '''
 
 from flask_wtf import FlaskForm
@@ -13,19 +15,10 @@ from flask_login import current_user
 from app.core.validators import password_complexity, unique_email, unique_username
 
 # signup form
-
-'''
-# Validating password input server-side
-Password must include:
-At least 6 characters
-At least one uppercase letter (A-Z)
-At least one lowercase letter (a-z)
-At least one number (0-9)
-At least one special character (!@#$%^&*)
-'''
 class SignupForm(FlaskForm):
     email = StringField(
         validators=[DataRequired(), Email(), unique_email()],
+        # render_kw tells the application how to render the form using CSS
         render_kw={"class": "input", "placeholder": "E-mail"}
     )
 

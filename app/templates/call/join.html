@@ -19,26 +19,35 @@ comments below.
     <h1 class="page-title">SignBridge</h1>
     <p class="page-subtitle">Real-Time Sign Language Communication</p>
     <div class="card card-sm">
-        <form method="POST" action="{{ url_for('call.join') }}">
-            <!-- User Name Input -->
+        <form action="" method="post" novalidate> <!-- no validation done client-side -->
+            {{ form.hidden_tag() }} <!-- creates a unique token, used to prevent CSLR attacks -->
+
+            <!-- User's name -->
             <div class="form-group">
-                <label class="form-label" for="userName">Your Name</label>
-                <input class="input" type="text" id="userName" name="user_name" placeholder="Enter your name">
+                {{ form.user_name.label(class="form-label") }}
+                {{ form.user_name() }}
             </div>
+
             <!-- Room code -->
             <div class="form-group">
-                <label class="form-label" for="roomCode">Room Code</label>
-                <input class="input" type="text" id="roomCode" name="room_code" placeholder="Enter room code">
+                {{ form.room_code.label(class="form-label") }}
+                {{ form.room_code() }}
+                {% for error in form.room_code.errors %} <!-- returns error if not validated -->
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
             </div>
-            <!-- Join Room -->
-            <button type="submit" class="btn btn-primary btn-block">Start Call</button>
+
+            <!-- Join Button -->
+            {{ form.submit() }}
+
+            <div class="divider">OR</div>
         </form>
-        <div class="divider">OR</div>
-        <!-- Create New Session -->
+
+        <!-- alternatively, create a new room  -->
         <form method="POST" action="{{ url_for('call.create_room') }}">
-            <button type="submit" class="btn btn-secondary btn-block">Create New Session</button>
+            {{ create_form.hidden_tag() }}
+            {{ create_form.submit() }}
         </form>
-    </div>
 </main>
 
 {% endblock %}

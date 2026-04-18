@@ -1,9 +1,13 @@
 '''
 models.py
 Created by Shivangi Sritharan
-Last modified: 10/04/2026
+Last modified: 18/04/2026
 
-database description
+This file contains the code used to generate 
+the application database. The code is implemented
+with SQLAlchemy to maintain a DBMS-agnostic 
+database script. We use Flask-Migrate elsewhere to
+generate a migration script for the database.
 '''
 
 from datetime import datetime, timezone

@@ -1,2 +1,0 @@
-FLASK_APP=signbridge.py
-FLASK_DEBUG=1

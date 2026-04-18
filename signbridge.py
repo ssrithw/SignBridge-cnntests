@@ -7,8 +7,12 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 from app import create_app, db, socketio
 from app.models import User
+import signal
+import sys
 
 app = create_app()
+HOST = "127.0.0.1"
+PORT = 5000
 
 # this context processor is used to test database operations
 # remove it in production
@@ -16,5 +20,20 @@ app = create_app()
 def make_shell_context():
     return {'sa': sa, 'so': so, 'db': db, 'User': User}
 
+# gracefully handle shutdown
+# not required but we are currently at "panic texting me about
+# the entire project failing because you saw a Big Scary Error
+# named keyboard interrupt" levels of software literacy here
+def handle_shutdown(sig, frame):
+    print("\nShutting down server...")
+    app.logger.info("Received shutdown signal")
+    sys.exit(0)
+
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    print(f"\nDevelopment server running at: http://{HOST}:{PORT}\n")
+    app.logger.info(f"Development server URL: http://{HOST}:{PORT}")
+
+    socketio.run(app, host=HOST, port=PORT, debug=True, use_reloader=False)
+

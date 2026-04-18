@@ -1,12 +1,12 @@
 '''
-core/validators.py
+app/core/validators.py
 
 Created by Dulneth Kurunduwatte
-Last modified 16/04/2026
+Last modified 18/04/2026
 
 This file contains validation methods for user details.
-It is considered a core file instead of either an auth or
-user file due to the mix of methods.
+It is placed in /core/ due to various blueprints 
+requiring validation.
 
 '''
 import re

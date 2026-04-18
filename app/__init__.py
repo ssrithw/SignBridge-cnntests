@@ -1,25 +1,40 @@
+'''
+app/__init__.py
+
+Created by Shivangi Sritharan
+Last modified 18/04/2026
+
+This file is used to initialize the entire application.
+All extensions, blueprints and socket event handlers
+are registered here.
+'''
+
 from flask import Flask
 from config import Config
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from app.errors.handlers import ratelimit_exceeded, page_not_found, internal_error
-from extensions import db, migrate, login, mail, moment, limiter, socketio, bcrypt
+from extensions import db, migrate, login, csrf, mail, moment, limiter, socketio, bcrypt
 import sqlalchemy as sa
+from werkzeug.middleware.proxy_fix import ProxyFix # for reverse proxy handling
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static", static_url_path="/static")
+    # proxy handling
+    app.wsgi_app = ProxyFix(app.wsgi_app,x_for=2,x_proto=1,x_host=1)
     app.config.from_object(config_class)
 
     # extensions
     db.init_app(app) # database
     migrate.init_app(app, db) # db migration engine
+    csrf.init_app(app) # protection against csrf attacks
     login.init_app(app) # login
     mail.init_app(app) #flask-mail for email operations
     moment.init_app(app) # flask-moment for timezone conversion
-    limiter.init_app(app) # flask-limiter for rate limiting
     socketio.init_app(app, async_mode='gevent', cors_allowed_origins='*') 
     bcrypt.init_app(app)
+    limiter.init_app(app) # flask-limiter for rate limiting
 
     # register blueprints here
     # auth blueprint
@@ -45,6 +60,10 @@ def create_app(config_class=Config):
     # user blueprint
     from app.user import user_bp
     app.register_blueprint(user_bp, url_prefix='/your-account')
+
+    # admin blueprint
+    from app.admin import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
 
     # call rate limit from limiter instead of using 
     # flask's built in limiter

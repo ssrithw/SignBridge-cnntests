@@ -1,5 +1,5 @@
 '''
-core/nav.py
+app/core/nav.py
 
 This file exists to map navigation endpoints to UI state.
 '''

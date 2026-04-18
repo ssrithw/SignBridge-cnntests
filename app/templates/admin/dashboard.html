@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<main class="main">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">Manage users, roles, and system activity</p>
+
+    <!-- QUICK STATS -->
+    <div class="card card-sm" style="margin-bottom:15px;">
+        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+            <div class="card card-sm" style="flex:1;">
+                <strong>Total Users</strong>
+                <p>{{ total_users }}</p>
+            </div>
+
+            <div class="card card-sm" style="flex:1;">
+                <strong>Active Users</strong>
+                <p>{{ active_users }}</p>
+            </div>
+
+            <div class="card card-sm" style="flex:1;">
+                <strong>Online Now</strong>
+                <p>{{ online_users }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEARCH + FILTER -->
+    <div class="card card-sm">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+
+            <input class="input" type="text" id="searchUser" placeholder="Search users...">
+
+            <select class="input" id="roleFilter">
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="moderator">Moderator</option>
+                <option value="agent">Agent</option>
+                <option value="user">User</option>
+            </select>
+
+            <select class="input" id="statusFilter">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+                <option value="verified">Verified</option>
+                <option value="unverified">Unverified</option>
+            </select>
+
+        </div>
+    </div>
+
+    <!-- USER LIST -->
+    <div style="margin-top:15px;">
+
+        {% for user in users %}
+        <div class="card card-sm" style="margin-bottom:10px;">
+
+            <!-- Top row -->
+            <div style="display:flex; align-items:center; gap:15px;">
+
+                <!-- Avatar -->
+                <img src="{{ user.avatar(64) }}" alt="avatar">
+
+                <!-- Info -->
+                <div style="flex:1;">
+                    <p><strong>{{ user.username }}</strong></p>
+                    <p>{{ user.email }}</p>
+                    <small>
+                        Last active:
+                        {% if user.last_seen %}
+                            {{ moment(user.last_seen).fromNow() }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </small>
+                </div>
+
+                <!-- Status badges -->
+                <div style="text-align:right;">
+                    {% if user.is_online %}
+                        <span class="badge badge-success">Online</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Offline</span>
+                    {% endif %}
+
+                    {% if user.is_verified %}
+                        <span class="badge badge-primary">Verified</span>
+                    {% else %}
+                        <span class="badge badge-warning">Unverified</span>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- ROLE + ACTIONS -->
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+
+                <!-- Role assignment -->
+                <form method="POST" action="{{ url_for('admin.update_role', user_id=user.id) }}">
+                    <select name="role" class="input" onchange="this.form.submit()">
+                        <option value="user" {% if user.role=='user' %}selected{% endif %}>User</option>
+                        <option value="agent" {% if user.role=='agent' %}selected{% endif %}>Agent</option>
+                        <option value="moderator" {% if user.role=='moderator' %}selected{% endif %}>Moderator</option>
+                        <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                </form>
+
+                <!-- View profile -->
+                <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="btn btn-primary btn-sm">
+                    View
+                </a>
+
+                <!-- Deactivate -->
+                {% if user.is_active %}
+                <form method="POST" action="{{ url_for('admin.deactivate_user', user_id=user.id) }}">
+                    <button class="btn btn-warning btn-sm">Deactivate</button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('admin.activate_user', user_id=user.id) }}">
+                    <button class="btn btn-success btn-sm">Activate</button>
+                </form>
+                {% endif %}
+
+                <!-- Delete -->
+                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
+                    <button class="btn btn-danger btn-sm"
+                        onclick="return confirm('Delete this user?')">
+                        Delete
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+</main>
+
+{% endblock %}

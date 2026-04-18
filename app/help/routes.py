@@ -1,11 +1,10 @@
 '''
-routes.py
+app/help/routes.py
 Created by Shivangi Sritharan
-Last modified: 14/04/2026
+Last modified: 18/04/2026
 
-This file contains the routes every web page in this
-application. It reuses code from the deprecated app.py but
-is part of the new modularization effort.
+This file contains the routes for the help
+pages in the application.
 '''
 
 from flask import render_template

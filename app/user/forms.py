@@ -1,9 +1,11 @@
 '''
-forms.py
+app/user/forms.py
 Created by Shivangi Sritharan
-Last modified: 10/04/2026
+Last modified: 18/04/2026
 
-This file contains forms. Idk. Update later.
+This file contains user-related forms that
+are not related to authentication.
+Forms are implemented with WTForms.
 '''
 
 from flask_wtf import FlaskForm
@@ -17,6 +19,7 @@ class EditProfileForm(FlaskForm):
     # username field
     username = StringField(('Change your username:'), 
         validators=[Optional()],
+        # render_kw tells the application how to render the form with CSS
         render_kw={"class": "input", "placeholder": "Username"}
     )
 
