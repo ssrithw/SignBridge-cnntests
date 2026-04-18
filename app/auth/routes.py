@@ -123,3 +123,10 @@ def reset_password(token):
         flash('Your password has been reset. You can now log in.')
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', form=form)
+
+
+# limiter test remove later
+@auth_bp.route("/rate-limit-test", methods=["POST"])
+@limiter.limit("5 per minute")
+def rate_limit_test():
+    return {"ok": True}
