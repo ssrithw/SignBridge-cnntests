@@ -22,7 +22,6 @@ from flask_socketio import SocketIO # for websocket access
 from flask_bcrypt import Bcrypt # for password hashing
 from flask import request
 import os
-
 # initialize all modules
 db = SQLAlchemy() # db represents the database object
 migrate = Migrate() # migrate represents the migration engine
@@ -31,9 +30,16 @@ csrf = CSRFProtect()
 mail = Mail()
 moment = Moment() 
 socketio = SocketIO()
+
+def get_ip():
+    xff = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if xff and "," in xff:
+        return xff.split(",")[0].strip()
+    return xff
+
 limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["200 per minute"]
+    key_func=get_ip,
+    storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
 )
 bcrypt = Bcrypt()
 
