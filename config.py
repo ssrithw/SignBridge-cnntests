@@ -36,7 +36,7 @@ class Config:
 
     # the flask-limiter extension stores data in this
     # because limiter uses the limit library this is kept separate from sqlalchemy
-    RATELIMIT_STORAGE_URI = os.environ.get('STORAGE_URI') or 'memory://'
+    RATELIMIT_STORAGE_URI = os.environ.get('STORAGE_URI')
     
     # admin email mailing list lol
     MAIL_SERVER = os.environ.get('MAIL_SERVER')

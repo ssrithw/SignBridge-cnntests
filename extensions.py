@@ -22,13 +22,6 @@ from flask_socketio import SocketIO # for websocket access
 from flask_bcrypt import Bcrypt # for password hashing
 from flask import request
 
-# used by flask-limiter
-def get_real_ip():
-    # Render / proxy safe IP extraction
-    if request.headers.getlist("X-Forwarded-For"):
-        return request.headers.getlist("X-Forwarded-For")[0]
-    return request.remote_addr
-
 # initialize all modules
 db = SQLAlchemy() # db represents the database object
 migrate = Migrate() # migrate represents the migration engine
@@ -38,7 +31,7 @@ mail = Mail()
 moment = Moment() 
 socketio = SocketIO()
 limiter = Limiter(
-    key_func=get_real_ip,
+    key_func=get_remote_address,
     default_limits=["200 per minute"],
     # storage_uri has been moved to config.py
 )
