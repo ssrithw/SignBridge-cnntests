@@ -125,10 +125,10 @@ def reset_password(token):
     return render_template('auth/reset_password.html', form=form)
 
 # testing limiter remove later
-from flask_wtf.csrf import csrf_exempt
+from extensions import csrf
 
 @auth_bp.route("/rate-limit-test", methods=["POST"])
-@csrf_exempt
+@csrf.exempt
 @limiter.limit("5 per minute")
 def rate_limit_test():
     return {"ok": True}
