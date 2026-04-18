@@ -6,16 +6,17 @@ Last modified: 18/04/2026
 This file contains custom error handlers.
 '''
 
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, jsonify, request
 
 # 404 page not found
 def page_not_found(e):
     return render_template("errors/404.html", title='404 Page Not Found'), 404
 
-# 429 rate limit exceeded
 def ratelimit_exceeded(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify(error="rate_limit_exceeded", message="Too many requests. Please slow down."), 429
     flash("Too many requests. Please slow down.", "warning")
-    return redirect(url_for('main.index')), 302 # temporary redirect
+    return redirect(url_for('main.index'))  # redirect() is already 302, drop the extra status
 
 # 500 internal server error
 def internal_error(error):
