@@ -76,6 +76,8 @@ python signbridge.py
 
 Use `cd docs` followed by `sphinx-build -b html source build/html` to build the documentation on your machine.
 
+Navigate to docs/build and select a html file to view it.
+
 ## todo
 * let users switch mic and cam off if needed
 * fix error.html
