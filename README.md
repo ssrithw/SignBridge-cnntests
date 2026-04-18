@@ -62,7 +62,7 @@ pip install requirements.txt
 ```
 or
 ```
-python3 -m pip install requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 <b>6) Run the development server with the following command:</b>
