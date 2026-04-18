@@ -22,7 +22,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix # for reverse proxy handling
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder="static", static_url_path="/static")
     # proxy handling
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app,x_for=2,x_proto=1,x_host=1)
     app.config.from_object(config_class)
 
     # extensions
@@ -32,9 +32,9 @@ def create_app(config_class=Config):
     login.init_app(app) # login
     mail.init_app(app) #flask-mail for email operations
     moment.init_app(app) # flask-moment for timezone conversion
-    limiter.init_app(app) # flask-limiter for rate limiting
     socketio.init_app(app, async_mode='gevent', cors_allowed_origins='*') 
     bcrypt.init_app(app)
+    limiter.init_app(app) # flask-limiter for rate limiting
 
     # register blueprints here
     # auth blueprint

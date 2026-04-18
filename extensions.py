@@ -37,10 +37,7 @@ def get_ip():
         return xff.split(",")[0].strip()
     return xff
 
-limiter = Limiter(
-    key_func=get_ip,
-    storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
-)
+limiter = Limiter(key_func=get_ip)
 bcrypt = Bcrypt()
 
 login.login_view = 'auth.login'
