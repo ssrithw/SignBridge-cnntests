@@ -131,6 +131,7 @@ from extensions import csrf
 @csrf.exempt
 @limiter.limit("5 per minute")
 def rate_limit_test():
+    print("IP:", request.headers.get("X-Forwarded-For"), request.remote_addr)
     return {"ok": True}
 
 @auth_bp.route("/debug-limiter")
