@@ -86,23 +86,10 @@ def create_app(config_class=Config):
 
             secure = () if app.config['MAIL_USE_TLS'] else None
 
-            class DynamicSMTPHandler(SMTPHandler):
-                def emit(self, record):
-                    with app.app_context():
-                        admins = db.session.scalars(
-                            sa.select(User).where(User.is_admin == True)
-                        ).all()
-                        self.toaddrs = [u.email for u in admins if u.email]
-
-                    if not self.toaddrs:
-                        return
-
-                    super().emit(record)
-
-            mail_handler = DynamicSMTPHandler(
+            mail_handler = SMTPHandler(
                 mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
                 fromaddr='no-reply@' + app.config['MAIL_SERVER'],
-                toaddrs=[],
+                toaddrs=["admin.signbridge+errors@gmail.com"],
                 subject='SignBridge Failure',
                 credentials=auth,
                 secure=secure

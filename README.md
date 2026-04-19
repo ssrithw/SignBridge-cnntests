@@ -94,6 +94,7 @@ Please note that the documentation is currently UNFINISHED!
 * add model toggle
 * add gradcam heatmaps
 * polish ui
+* add http 403 error
 
 ## Academic Supervision
 This application was guided and supervised by Ann Roshanie Appuhamy as part of undergraduate coursework.
