@@ -86,9 +86,7 @@ Use `cd docs` followed by `build html` to build the documentation on your machin
 Please note that the documentation is currently UNFINISHED!
 
 ## todo
-* DONE tie rate limits to user id if signed in, ip address if signed out
-* DONE enforce user blocks if failed login attempts 10 times 
-* DONE add a rate limit cooldown of 60 seconds
+* add a rate limit cooldown of 60 seconds
 * disable clicking buttons after rate limits are triggered
 * let users switch mic and cam off if needed
 * fix error.html or just delete it atp
