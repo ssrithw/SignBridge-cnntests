@@ -6,6 +6,9 @@ The application is developed with Flask, HTML, CSS and JavaScript. The deep lear
 The demo for this application can be viewed at https://signbridge-pzm3.onrender.com/ 
 
 ## How to run this application locally
+To run this on a local development server, you will need to set the environment variables defined in config.py.
+
+If you do not know how to do this, contact me for assistance.
 
 <b>1) Clone the repository to your local drive:</b>
 
