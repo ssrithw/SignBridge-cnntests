@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {
     passwordInput.addEventListener("input", () => {
         const val = passwordInput.value;
 
-        toggle(reqLength, val.length >= 6);
+        toggle(reqLength, val.length >= 12);
         toggle(reqUpper, /[A-Z]/.test(val));
         toggle(reqLower, /[a-z]/.test(val));
         toggle(reqNumber, /[0-9]/.test(val));
