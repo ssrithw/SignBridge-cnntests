@@ -1,8 +1,8 @@
-"""add is_admin to user
+"""recreated database
 
-Revision ID: 801057568b99
+Revision ID: 9f4fb704648e
 Revises: 
-Create Date: 2026-04-19 01:36:43.955788
+Create Date: 2026-04-20 10:46:56.194217
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '801057568b99'
+revision = '9f4fb704648e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -39,7 +39,7 @@ def upgrade():
     sa.Column('room_code', sa.String(length=9), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('owner_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('room', schema=None) as batch_op:

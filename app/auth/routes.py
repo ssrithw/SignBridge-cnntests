@@ -19,7 +19,7 @@ from app.auth.email import send_password_reset_email
 from flask_limiter.util import get_remote_address
 
 # this variable is used to track failed login attempts
-MAX_LOGIN_ATTEMPTS = 5 
+MAX_LOGIN_ATTEMPTS = 10
 
 # since rate limit by ip is abusable when logging in
 def login_key():
@@ -33,7 +33,7 @@ def login_key():
 def check_if_blocked():
     if current_user.is_authenticated and current_user.is_blocked:
         logout_user()
-        flash("Your account has been blocked. Contact an admin.")
+        flash("Your account has been blocked. Contact an admin (admin.signbridge+support@gmail.com).")
         return redirect(url_for('auth.login'))
 
 # route for login page
@@ -54,22 +54,20 @@ def login():
         if user:
             # implementing blocking functionality
             if user.is_blocked:
-                flash('Your account has been blocked. Contact an admin.')
+                flash('Your account has been blocked. Contact an admin (admin.signbridge+support@gmail.com).')
                 return redirect(url_for('auth.login'))
             
             # add failed login attempts
             if not user.check_password(form.password.data):
-                user.failed_login_attempts += 1
+                # For non-admin users, track failed attempts and block if necessary.
+                # This prevents an admin from being locked out of the system. - Dulneth
+                if not user.is_admin:
+                    user.failed_login_attempts += 1
+                    if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
+                        user.is_blocked = True
+                        current_app.logger.warning(f"User {user.username} has been blocked due to too many failed logins.")
+                    db.session.commit()
 
-                # block user if login attempts exceed maximum
-                if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
-                    user.is_blocked = True
-                    current_app.logger.warning(f"User {user.username} has been blocked due to too many failed logins.")
-                
-                # commit any changes to database
-                # current implementation requires an admin to 
-                # manually unblock - not good for production
-                db.session.commit()
                 current_app.logger.warning(f"Failed login attempt for username: {form.username.data} from IP: {request.remote_addr}")
                 flash('Invalid username or password')
                 return redirect(url_for('auth.login'))

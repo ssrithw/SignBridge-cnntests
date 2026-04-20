@@ -22,5 +22,5 @@ def ratelimit_exceeded(e):
 # 500 internal server error
 def internal_error(error):
     db.session.rollback() # useful if error was caused by a database mismatch
-    return render_template('errors/500.html'), 500
+    return render_template('errors/500.html', title='500 Internal Server Error'), 500
 

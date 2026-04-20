@@ -101,13 +101,17 @@ same as index page. pls update
 
           <!-- TRANSCRIPT MOVED HERE -->
           <div class="card transcript-card">
-            <p style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">
-              Transcript
-            </p>
-            <div class="transcript-box" id="transcriptBox">
-              <span style="color:#aaa;font-style:italic;">
-                Recognized letters will appear here…
-              </span>
+            <div class="card-header" onclick="toggleSection('transcriptContent')">
+              <p>Transcript</p>
+              <span class="toggle-icon">−</span>
+            </div>
+
+            <div id="transcriptContent">
+              <div class="transcript-box" id="transcriptBox">
+                <span style="color:#aaa;font-style:italic;">
+                  Recognized letters will appear here…
+                </span>
+              </div>
             </div>
           </div>
 
@@ -118,13 +122,17 @@ same as index page. pls update
 
           <!-- Current detected letter (UNCHANGED) -->
           <div class="card" style="padding:20px;">
-            <p style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">
-              Current Detected Letter
-            </p>
-            <div class="detected-letter" id="detectedLetter">—</div>
-            <p class="text-center mt-16" style="font-size:0.8rem;color:var(--text-secondary);" id="recognitionStatus">
-              No hand detected
-            </p>
+            <div class="card-header" onclick="toggleSection('detectedContent')">
+              <p>Current Detected Letter</p>
+              <span class="toggle-icon">−</span>
+            </div>
+
+            <div id="detectedContent">
+              <div class="detected-letter" id="detectedLetter">—</div>
+              <p class="text-center mt-16" style="font-size:0.8rem;color:var(--text-secondary);" id="recognitionStatus">
+                No hand detected
+              </p>
+            </div>
           </div>
 
           <!-- PLACEHOLDER CARD (replaces transcript area) -->
@@ -173,6 +181,20 @@ i've refactored them into two files
 -->
 <script type="module" src="/static/js/call.js"></script>
 <script type="module" src="/static/js/chat.js"></script>
+<script>
+  function toggleSection(id) {
+    const el = document.getElementById(id);
+    const icon = el.previousElementSibling.querySelector('.toggle-icon');
+
+    if (el.classList.contains('collapsed')) {
+      el.classList.remove('collapsed');
+      icon.textContent = '−';
+    } else {
+      el.classList.add('collapsed');
+      icon.textContent = '+';
+    }
+  }
+</script>
 
 {% endblock %}
 <!-- anything added below endblock WILL NOT show up in the page -->

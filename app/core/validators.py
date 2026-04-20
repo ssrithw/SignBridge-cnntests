@@ -24,8 +24,8 @@ def password_complexity(form, field):
     password = field.data
     errors = []
 
-    if len(password) < 6:
-        errors.append("at least 6 characters")
+    if len(password) < 12:
+        errors.append("at least 12 characters")
     if not re.search(r'[A-Z]', password):
         errors.append("at least one uppercase letter (A-Z)")
     if not re.search(r'[a-z]', password):
